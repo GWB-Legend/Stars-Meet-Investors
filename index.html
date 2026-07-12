@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stars Meet Investors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Cormorant Garamond', 'serif'],
+                        body: ['DM Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-deep: #0a0605;
+            --bg: #0f0b09;
+            --bg-card: #161110;
+            --bg-card-hover: #1e1816;
+            --bg-elevated: #231c18;
+            --fg: #f2ebe4;
+            --fg-warm: #e8ddd2;
+            --fg-muted: #8c7e70;
+            --fg-dim: #5a4f45;
+            --accent: #c8956c;
+            --accent-bright: #e4b08a;
+            --accent-deep: #9a6b42;
+            --accent-glow: rgba(200, 149, 108, 0.15);
+            --accent-glow-strong: rgba(200, 149, 108, 0.3);
+            --border: #2a2220;
+            --border-light: #3a302c;
+            --danger: #c94040;
+            --success: #5ba85b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg-deep);
+            color: var(--fg);
+            overflow-x: hidden;
+        }
+        .font-display { font-family: 'Cormorant Garamond', serif; }
+
+        /* Hidden Admin Trigger */
+        #adminTrigger {
+            position: fixed;
+            bottom: 0; right: 0;
+            width: 30px; height: 30px;
+            z-index: 9999;
+            cursor: default;
+            background: transparent;
+            border: none; outline: none;
+        }
+
+        /* Background Canvas */
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Ambient background glow */
+        .ambient-glow {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 60% 50% at 30% 20%, rgba(200,149,108,0.04) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 75% 70%, rgba(154,107,66,0.03) 0%, transparent 60%),
+                radial-gradient(ellipse 80% 60% at 50% 100%, rgba(200,149,108,0.02) 0%, transparent 50%);
+        }
+
+        /* Page Sections */
+        .page-section { display: none; min-height: 100vh; position: relative; z-index: 1; }
+        .page-section.active { display: block; }
+
+        /* Navigation */
+        .nav-glass {
+            background: rgba(10,6,5,0.85);
+            backdrop-filter: blur(24px);
+            border-bottom: 1px solid rgba(200,149,108,0.08);
+        }
+        .nav-link {
+            position: relative; color: var(--fg-muted); transition: color 0.3s; font-weight: 500; font-size: 0.9rem;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--accent-bright); }
+        .nav-link::after {
+            content: ''; position: absolute; bottom: -4px; left: 0;
+            width: 0; height: 2px; background: var(--accent); transition: width 0.3s;
+        }
+        .nav-link:hover::after, .nav-link.active::after { width: 100%; }
+
+        /* Logo image */
+        .logo-img {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--accent);
+            box-shadow: 0 0 12px rgba(200,149,108,0.25);
+            transition: box-shadow 0.3s;
+        }
+        .logo-img:hover { box-shadow: 0 0 20px rgba(200,149,108,0.4); }
+        .logo-img-sm { width: 32px; height: 32px; border-width: 1.5px; }
+        .logo-img-lg { width: 48px; height: 48px; border-width: 2.5px; }
+
+        /* Hero */
+        .hero-gradient {
+            background:
+                radial-gradient(ellipse 70% 55% at 45% 35%, rgba(200,149,108,0.07) 0%, transparent 70%),
+                radial-gradient(ellipse 45% 35% at 80% 15%, rgba(154,107,66,0.05) 0%, transparent 55%);
+        }
+        .hero-title {
+            font-size: clamp(2.8rem, 6.5vw, 5.5rem);
+            font-weight: 700;
+            line-height: 1.02;
+            letter-spacing: -0.01em;
+        }
+        .accent-text {
+            background: linear-gradient(135deg, var(--accent-bright), var(--accent), var(--accent-deep));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Buttons */
+        .btn-accent {
+            background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+            color: var(--bg-deep);
+            font-weight: 700; padding: 14px 36px; border-radius: 10px;
+            border: none; cursor: pointer; font-size: 1rem;
+            transition: all 0.3s; position: relative; overflow: hidden;
+            font-family: 'DM Sans', sans-serif;
+        }
+        .btn-accent:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(200,149,108,0.35);
+        }
+        .btn-accent::before {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            transition: left 0.5s;
+        }
+        .btn-accent:hover::before { left: 100%; }
+
+        .btn-outline {
+            background: transparent; color: var(--accent);
+            font-weight: 600; padding: 13px 35px; border-radius: 10px;
+            border: 1.5px solid var(--accent); cursor: pointer; font-size: 1rem;
+            transition: all 0.3s; font-family: 'DM Sans', sans-serif;
+        }
+        .btn-outline:hover { background: rgba(200,149,108,0.08); transform: translateY(-2px); }
+
+        /* Cards */
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 18px; padding: 36px 28px;
+            transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+            position: relative; overflow: hidden;
+        }
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0;
+            width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+            opacity: 0; transition: opacity 0.4s;
+        }
+        .feature-card:hover {
+            border-color: rgba(200,149,108,0.25);
+            transform: translateY(-6px);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 40px rgba(200,149,108,0.05);
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-icon {
+            width: 56px; height: 56px; border-radius: 14px;
+            background: var(--accent-glow);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent); font-size: 1.3rem; margin-bottom: 20px;
+        }
+
+        /* Gallery */
+        .gallery-img {
+            border-radius: 14px; overflow: hidden;
+            position: relative; cursor: pointer; transition: transform 0.4s;
+        }
+        .gallery-img:hover { transform: scale(1.02); }
+        .gallery-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s; }
+        .gallery-img:hover img { transform: scale(1.08); }
+        .gallery-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(to top, rgba(10,6,5,0.8) 0%, transparent 55%);
+            opacity: 0; transition: opacity 0.4s;
+            display: flex; align-items: flex-end; padding: 20px;
+        }
+        .gallery-img:hover .gallery-overlay { opacity: 1; }
+
+        /* Watermark preview on images */
+        .watermark-preview { position: relative; overflow: hidden; border-radius: 14px; }
+        .watermark-preview::after {
+            content: 'STARS MEET INVESTORS';
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 1.1rem; font-weight: 700;
+            color: rgba(200,149,108,0.2);
+            white-space: nowrap; pointer-events: none;
+            letter-spacing: 0.08em; font-family: 'Cormorant Garamond', serif;
+        }
+
+        /* Form Styles */
+        .form-group { margin-bottom: 20px; }
+        .form-label {
+            display: block; font-weight: 600; font-size: 0.8rem;
+            color: var(--fg-muted); margin-bottom: 8px;
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .form-input {
+            width: 100%; padding: 14px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1.5px solid var(--border); border-radius: 10px;
+            color: var(--fg); font-size: 1rem;
+            font-family: 'DM Sans', sans-serif;
+            transition: all 0.3s; outline: none;
+        }
+        .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(200,149,108,0.12);
+            background: rgba(255,255,255,0.05);
+        }
+        .form-input::placeholder { color: var(--fg-dim); }
+        select.form-input { cursor: pointer; }
+        select.form-input option { background: var(--bg-card); color: var(--fg); }
+
+        /* Modal */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.78);
+            backdrop-filter: blur(10px);
+            z-index: 1000; display: none;
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        .modal-backdrop.show { display: flex; }
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 22px; padding: 40px;
+            max-width: 440px; width: 100%;
+            position: relative;
+            animation: modalIn 0.4s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.92) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed; top: 24px; right: 24px;
+            z-index: 2000; display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast {
+            padding: 16px 24px; border-radius: 12px;
+            font-weight: 500; font-size: 0.9rem;
+            animation: toastIn 0.4s cubic-bezier(0.16,1,0.3,1), toastOut 0.3s 3.5s forwards;
+            max-width: 400px; display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+        }
+        .toast-success { background: #1a2e1a; color: #a8e6a8; border: 1px solid #2d4a2d; }
+        .toast-error { background: #2e1a1a; color: #e6a8a8; border: 1px solid #4a2d2d; }
+        .toast-info { background: var(--bg-elevated); color: var(--fg); border: 1px solid var(--border-light); }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toastOut { to { opacity: 0; transform: translateX(60px); } }
+
+        /* Admin Panel */
+        .admin-sidebar {
+            width: 260px; background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            min-height: 100vh; padding: 24px 0;
+            position: fixed; left: 0; top: 0; z-index: 100; overflow-y: auto;
+        }
+        .admin-main { margin-left: 260px; padding: 32px; min-height: 100vh; }
+        .admin-nav-item {
+            padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+            color: var(--fg-muted); cursor: pointer; transition: all 0.2s;
+            font-weight: 500; border-left: 3px solid transparent; font-size: 0.9rem;
+        }
+        .admin-nav-item:hover { background: rgba(200,149,108,0.04); color: var(--fg-warm); }
+        .admin-nav-item.active {
+            color: var(--accent-bright);
+            background: var(--accent-glow);
+            border-left-color: var(--accent);
+        }
+
+        /* Table */
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th {
+            text-align: left; padding: 14px 16px;
+            font-size: 0.72rem; text-transform: uppercase;
+            letter-spacing: 0.08em; color: var(--fg-muted);
+            border-bottom: 1px solid var(--border); font-weight: 600;
+        }
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 0.88rem;
+        }
+        .data-table tr:hover td { background: rgba(200,149,108,0.03); }
+
+        /* Badge */
+        .badge {
+            display: inline-flex; padding: 4px 12px;
+            border-radius: 20px; font-size: 0.72rem; font-weight: 600;
+        }
+        .badge-pending { background: rgba(200,149,108,0.12); color: var(--accent-bright); }
+        .badge-completed { background: rgba(91,168,91,0.12); color: #8fd68f; }
+        .badge-rejected { background: rgba(201,64,64,0.12); color: #e68a8a; }
+
+        /* Scroll animations */
+        .reveal {
+            opacity: 0; transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.16,1,0.3,1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        .stat-number { font-size: 3rem; font-weight: 700; line-height: 1; }
+
+        /* Section divider */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+            margin: 0 auto; max-width: 600px;
+        }
+
+        /* Lightbox */
+        .lightbox {
+            position: fixed; inset: 0;
+            background: rgba(5,3,2,0.94);
+            z-index: 3000; display: none;
+            align-items: center; justify-content: center; cursor: zoom-out;
+        }
+        .lightbox.show { display: flex; }
+        .lightbox img {
+            max-width: 90vw; max-height: 85vh;
+            border-radius: 14px; animation: modalIn 0.3s;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 7px; }
+        ::-webkit-scrollbar-track { background: var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--fg-dim); }
+
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        .float-slow { animation: floatSlow 6s ease-in-out infinite; }
+
+        @media (max-width: 768px) {
+            .admin-sidebar { width: 100%; position: relative; min-height: auto; }
+            .admin-main { margin-left: 0; }
+            .hero-title { font-size: 2.4rem; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Hidden Admin Trigger -->
+<button id="adminTrigger" aria-hidden="true" tabindex="-1"></button>
+
+<!-- Ambient Background -->
+<div class="ambient-glow"></div>
+<canvas id="bgCanvas"></canvas>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <img id="lightboxImg" src="" alt="Enlarged">
+</div>
+
+<!-- Admin Login Modal -->
+<div class="modal-backdrop" id="adminLoginModal">
+    <div class="modal-box">
+        <button onclick="closeAdminLogin()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--fg-muted);cursor:pointer;font-size:1.3rem;" aria-label="Close"><i class="fas fa-times"></i></button>
+        <div style="text-align:center;margin-bottom:28px;">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-lg mx-auto mb-4" alt="Stars Meet Investors">
+            <h3 class="font-display" style="font-size:1.6rem;font-weight:700;">Admin Access</h3>
+            <p style="color:var(--fg-muted);font-size:0.85rem;margin-top:6px;">Restricted — authorized personnel only</p>
+        </div>
+        <form onsubmit="handleAdminLogin(event)">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" id="adminUser" class="form-input" placeholder="Enter username" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="adminPass" class="form-input" placeholder="Enter password" required>
+            </div>
+            <button type="submit" class="btn-accent" style="width:100%;margin-top:8px;">Sign In</button>
+        </form>
+    </div>
+</div>
+
+<!-- ==================== FRONTEND ==================== -->
+
+<!-- Navigation -->
+<nav class="nav-glass fixed top-0 left-0 w-full z-50" id="mainNav">
+    <div class="max-w-7xl mx-auto px-6 flex items-center justify-between h-16">
+        <a href="#" onclick="showSection('home')" class="flex items-center gap-3 no-underline">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img" alt="Stars Meet Investors">
+            <span class="font-display font-bold text-xl tracking-tight" style="color:var(--fg-warm);">Stars Meet Investors</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+            <a href="#" class="nav-link active" onclick="showSection('home')" data-nav="home">Home</a>
+            <a href="#" class="nav-link" onclick="showSection('about')" data-nav="about">About</a>
+            <a href="#" class="nav-link" onclick="showSection('gallery')" data-nav="gallery">Gallery</a>
+            <a href="#" class="nav-link" onclick="showSection('register')" data-nav="register">Register</a>
+            <a href="#" class="nav-link" onclick="showSection('contact')" data-nav="contact">Contact</a>
+        </div>
+        <button class="md:hidden text-xl" style="background:none;border:none;color:var(--fg);cursor:pointer;" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+            <i class="fas fa-bars" id="menuIcon"></i>
+        </button>
+    </div>
+    <div class="md:hidden hidden" id="mobileMenu" style="background:var(--bg-card);border-top:1px solid var(--border);padding:16px 24px;">
+        <a href="#" class="block py-3 nav-link" onclick="showSection('home');toggleMobileMenu()">Home</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('about');toggleMobileMenu()">About</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('gallery');toggleMobileMenu()">Gallery</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('register');toggleMobileMenu()">Register</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('contact');toggleMobileMenu()">Contact</a>
+    </div>
+</nav>
+
+<!-- HOME -->
+<section class="page-section active" id="sectionHome">
+    <div class="hero-gradient min-h-screen flex items-center relative" style="padding-top:80px;">
+        <div class="max-w-7xl mx-auto px-6 w-full">
+            <div class="grid md:grid-cols-2 gap-16 items-center">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8" style="background:var(--accent-glow);border:1px solid rgba(200,149,108,0.15);">
+                        <span class="w-2 h-2 rounded-full" style="background:var(--accent-bright);animation:floatSlow 3s ease-in-out infinite;"></span>
+                        <span style="color:var(--accent-bright);font-size:0.82rem;font-weight:600;">Where Vision Meets Capital</span>
+                    </div>
+                    <h1 class="hero-title font-display">
+                        <span class="accent-text">Stars</span> Meet<br><span class="accent-text">Investors</span>
+                    </h1>
+                    <p style="color:var(--fg-muted);max-width:520px;line-height:1.75;margin-top:24px;font-size:1.05rem;">
+                        The premier platform bridging ambitious businesses with strategic investors. Register, gain visibility, and secure the funding to scale your vision.
+                    </p>
+                    <div class="flex flex-wrap gap-4 mt-10">
+                        <button class="btn-accent" onclick="showSection('register')">
+                            <i class="fas fa-rocket mr-2"></i>Register Now
+                        </button>
+                        <button class="btn-outline" onclick="showSection('about')">
+                            Learn More <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="hidden md:block relative">
+                    <div class="watermark-preview float-slow" style="aspect-ratio:3/4;max-width:380px;margin-left:auto;">
+                        <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" alt="Stars Meet Investors" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+                    </div>
+                    <div class="absolute -bottom-6 -left-6 p-5 rounded-2xl" style="background:var(--bg-card);border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                        <div class="stat-number accent-text font-display">500+</div>
+                        <div style="color:var(--fg-muted);font-size:0.82rem;margin-top:4px;">Registered</div>
+                    </div>
+                    <div class="absolute -top-4 -right-4 p-4 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,0.4);">
+                        <div style="color:var(--accent-bright);font-size:1.6rem;font-weight:700;">$24M+</div>
+                        <div style="color:var(--fg-muted);font-size:0.72rem;">Capital Raised</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+        <div class="max-w-7xl mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div class="text-center reveal">
+                <div class="stat-number accent-text font-display" data-count="500">0</div>
+                <div style="color:var(--fg-muted);font-size:0.85rem;margin-top:6px;">Registered</div>
+            </div>
+            <div class="text-center reveal">
+                <div class="stat-number accent-text font-display" data-count="120">0</div>
+                <div style="color:var(--fg-muted);font-size:0.85rem;margin-top:6px;">Active Investors</div>
+            </div>
+            <div class="text-center reveal">
+                <div class="stat-number accent-text font-display" data-count="35">0</div>
+                <div style="color:var(--fg-muted);font-size:0.85rem;margin-top:6px;">Deals Closed</div>
+            </div>
+            <div class="text-center reveal">
+                <div class="stat-number accent-text font-display" data-count="12">0</div>
+                <div style="color:var(--fg-muted);font-size:0.85rem;margin-top:6px;">Countries</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="py-24 px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16 reveal">
+                <span style="color:var(--accent);font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;">Why Choose Us</span>
+                <h2 class="font-display text-4xl md:text-5xl font-bold mt-3">Built for Growth</h2>
+                <p style="color:var(--fg-muted);max-width:480px;margin:12px auto 0;">Everything your business needs to attract and secure the right investment.</p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="fas fa-handshake"></i></div>
+                    <h3 class="font-display text-xl font-bold mb-3">Investor Matching</h3>
+                    <p style="color:var(--fg-muted);line-height:1.7;">Our system pairs you with investors aligned with your industry, stage, and capital requirements.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3 class="font-display text-xl font-bold mb-3">Growth Analytics</h3>
+                    <p style="color:var(--fg-muted);line-height:1.7;">Track visibility, investor interest, and engagement in real-time on your dashboard.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="fas fa-file-contract"></i></div>
+                    <h3 class="font-display text-xl font-bold mb-3">Secure Documents</h3>
+                    <p style="color:var(--fg-muted);line-height:1.7;">Watermarked, verifiable registration documents ensure authenticity and protect identity.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="fas fa-globe"></i></div>
+                    <h3 class="font-display text-xl font-bold mb-3">Global Network</h3>
+                    <p style="color:var(--fg-muted);line-height:1.7;">Access investors across 12+ countries. Your next partner could be anywhere.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="fas fa-calendar-check"></i></div>
+                    <h3 class="font-display text-xl font-bold mb-3">Live Pitch Events</h3>
+                    <p style="color:var(--fg-muted);line-height:1.7;">Present directly to panels of qualified investors at our curated pitch sessions.</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon"><i class="fas fa-lock"></i></div>
+                    <h3 class="font-display text-xl font-bold mb-3">Data Privacy</h3>
+                    <p style="color:var(--fg-muted);line-height:1.7;">Encrypted, shared only with investors you approve. Full control, always.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="py-20 px-6">
+        <div class="max-w-4xl mx-auto text-center rounded-3xl p-16 relative overflow-hidden reveal" style="background:linear-gradient(135deg,rgba(200,149,108,0.1),rgba(154,107,66,0.05));border:1px solid rgba(200,149,108,0.15);">
+            <h2 class="font-display text-3xl md:text-4xl font-bold mb-4">Ready to Meet Your Investors?</h2>
+            <p style="color:var(--fg-muted);max-width:460px;margin:0 auto 32px;line-height:1.7;">Register today and take the first step toward securing the capital that will define your next chapter.</p>
+            <button class="btn-accent text-lg px-12 py-4" onclick="showSection('register')">
+                Start Registration <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer style="border-top:1px solid var(--border);padding:48px 24px 32px;">
+        <div class="max-w-7xl mx-auto grid md:grid-cols-4 gap-12">
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-lg">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:0.88rem;line-height:1.7;">Bridging the gap between ambitious businesses and strategic investors worldwide.</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-sm uppercase tracking-wider" style="color:var(--accent);">Quick Links</h4>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About Us</a>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-sm uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-2 text-sm" style="color:var(--fg-muted);">Growth Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-sm uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all 0.3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all 0.3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all 0.3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-instagram"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:0.85rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-12 mb-6"></div>
+        <p class="text-center text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+    </footer>
+</section>
+
+<!-- ABOUT -->
+<section class="page-section" id="sectionAbout">
+    <div style="padding-top:100px;" class="max-w-7xl mx-auto px-6 pb-24">
+        <div class="text-center mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;">About Us</span>
+            <h1 class="font-display text-4xl md:text-5xl font-bold mt-3">Our Story</h1>
+        </div>
+        <div class="grid md:grid-cols-2 gap-16 items-center mb-20">
+            <div class="reveal">
+                <div class="watermark-preview" style="aspect-ratio:4/3;">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0015.jpg" alt="About" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+                </div>
+            </div>
+            <div class="reveal">
+                <h2 class="font-display text-3xl font-bold mb-6">Empowering Businesses to <span class="accent-text">Shine</span></h2>
+                <p style="color:var(--fg-muted);line-height:1.8;margin-bottom:16px;">Stars Meet Investors was founded with a singular mission: to eliminate the friction between promising businesses and the capital they need to thrive.</p>
+                <p style="color:var(--fg-muted);line-height:1.8;margin-bottom:16px;">We believe that great ideas shouldn't die in boardrooms for lack of access. Our platform curates, verifies, and presents businesses to a network of pre-qualified investors who are actively seeking opportunities.</p>
+                <p style="color:var(--fg-muted);line-height:1.8;">From tech startups to established SMEs looking to scale, we provide the infrastructure for meaningful connections that lead to real deals.</p>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8 reveal">
+            <div class="feature-card text-center">
+                <div class="stat-number accent-text font-display mb-2">2019</div>
+                <h3 class="font-bold text-lg mb-2">Year Founded</h3>
+                <p style="color:var(--fg-muted);font-size:0.88rem;">Born from a vision to democratize access to investment capital.</p>
+            </div>
+            <div class="feature-card text-center">
+                <div class="stat-number accent-text font-display mb-2">$24M</div>
+                <h3 class="font-bold text-lg mb-2">Capital Facilitated</h3>
+                <p style="color:var(--fg-muted);font-size:0.88rem;">Total investment capital successfully facilitated through our platform.</p>
+            </div>
+            <div class="feature-card text-center">
+                <div class="stat-number accent-text font-display mb-2">98%</div>
+                <h3 class="font-bold text-lg mb-2">Satisfaction Rate</h3>
+                <p style="color:var(--fg-muted);font-size:0.88rem;">Our partners consistently rate us highly.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- GALLERY -->
+<section class="page-section" id="sectionGallery">
+    <div style="padding-top:100px;" class="max-w-7xl mx-auto px-6 pb-24">
+        <div class="text-center mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;">Gallery</span>
+            <h1 class="font-display text-4xl md:text-5xl font-bold mt-3">Moments That Matter</h1>
+            <p style="color:var(--fg-muted);max-width:480px;margin:12px auto 0;">Highlights from our pitch events, networking sessions, and celebrations.</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="galleryGrid"></div>
+    </div>
+</section>
+
+<!-- REGISTRATION -->
+<section class="page-section" id="sectionRegister">
+    <div style="padding-top:100px;" class="max-w-3xl mx-auto px-6 pb-24">
+        <div class="text-center mb-12 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;">Registration</span>
+            <h1 class="font-display text-4xl md:text-5xl font-bold mt-3">Register Your Business</h1>
+            <p style="color:var(--fg-muted);max-width:500px;margin:12px auto 0;">A watermarked PDF confirmation will be generated and sent to your email upon successful registration.</p>
+        </div>
+        <div class="rounded-2xl p-8 md:p-12 reveal" style="background:var(--bg-card);border:1px solid var(--border);">
+            <form id="registrationForm" onsubmit="handleRegistration(event)">
+                <div class="grid md:grid-cols-2 gap-x-6">
+                    <div class="form-group">
+                        <label class="form-label">Business Name *</label>
+                        <input type="text" class="form-input" id="regEntityName" placeholder="Your business name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Registration Number</label>
+                        <input type="text" class="form-input" id="regRegNumber" placeholder="e.g. RC-1234567">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Representative Full Name *</label>
+                        <input type="text" class="form-input" id="regFullName" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address *</label>
+                        <input type="email" class="form-input" id="regEmail" placeholder="john@business.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number *</label>
+                        <input type="tel" class="form-input" id="regPhone" placeholder="+234 800 000 0000" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Industry/Sector *</label>
+                        <select class="form-input" id="regIndustry" required>
+                            <option value="">Select industry</option>
+                            <option>Technology</option>
+                            <option>Agriculture</option>
+                            <option>Healthcare</option>
+                            <option>Finance</option>
+                            <option>Real Estate</option>
+                            <option>Manufacturing</option>
+                            <option>Education</option>
+                            <option>Energy</option>
+                            <option>Logistics</option>
+                            <option>Entertainment</option>
+                            <option>Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Business Stage *</label>
+                        <select class="form-input" id="regStage" required>
+                            <option value="">Select stage</option>
+                            <option>Pre-Seed</option>
+                            <option>Seed</option>
+                            <option>Series A</option>
+                            <option>Series B</option>
+                            <option>Growth Stage</option>
+                            <option>Established</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Capital Seeking (USD)</label>
+                        <input type="text" class="form-input" id="regCapital" placeholder="e.g. 500,000">
+                    </div>
+                    <div class="form-group md:col-span-2">
+                        <label class="form-label">Business Address *</label>
+                        <input type="text" class="form-input" id="regAddress" placeholder="Full business address" required>
+                    </div>
+                    <div class="form-group md:col-span-2">
+                        <label class="form-label">Brief Description *</label>
+                        <textarea class="form-input" id="regDescription" rows="4" placeholder="Describe your business, its mission, and what you seek from investors..." required style="resize:vertical;"></textarea>
+                    </div>
+                </div>
+                <div class="section-divider my-8"></div>
+                <p style="color:var(--fg-muted);font-size:0.84rem;margin-bottom:20px;line-height:1.6;">
+                    <i class="fas fa-info-circle mr-1" style="color:var(--accent);"></i>
+                    Your registration document will include a watermarked profile image for verification. By submitting, you agree to our terms and data processing policies.
+                </p>
+                <button type="submit" class="btn-accent w-full text-lg py-4" id="regSubmitBtn">
+                    <i class="fas fa-paper-plane mr-2"></i>Submit Registration
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- CONTACT -->
+<section class="page-section" id="sectionContact">
+    <div style="padding-top:100px;" class="max-w-5xl mx-auto px-6 pb-24">
+        <div class="text-center mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.12em;">Contact</span>
+            <h1 class="font-display text-4xl md:text-5xl font-bold mt-3">Get In Touch</h1>
+        </div>
+        <div class="grid md:grid-cols-3 gap-8 mb-16">
+            <div class="feature-card text-center reveal">
+                <div class="feature-icon mx-auto"><i class="fas fa-envelope"></i></div>
+                <h3 class="font-bold mb-2">Email</h3>
+                <p style="color:var(--fg-muted);font-size:0.88rem;">info@starsmeetinvestors.com</p>
+            </div>
+            <div class="feature-card text-center reveal">
+                <div class="feature-icon mx-auto"><i class="fas fa-phone"></i></div>
+                <h3 class="font-bold mb-2">Phone</h3>
+                <p style="color:var(--fg-muted);font-size:0.88rem;">+234 800 123 4567</p>
+            </div>
+            <div class="feature-card text-center reveal">
+                <div class="feature-icon mx-auto"><i class="fas fa-location-dot"></i></div>
+                <h3 class="font-bold mb-2">Office</h3>
+                <p style="color:var(--fg-muted);font-size:0.88rem;">Victoria Island, Lagos, Nigeria</p>
+            </div>
+        </div>
+        <div class="rounded-2xl p-8 md:p-12 reveal" style="background:var(--bg-card);border:1px solid var(--border);">
+            <form onsubmit="handleContact(event)">
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="form-group">
+                        <label class="form-label">Your Name</label>
+                        <input type="text" class="form-input" placeholder="Full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" placeholder="Email address" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input type="text" class="form-input" placeholder="How can we help?" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-input" rows="5" placeholder="Your message..." required style="resize:vertical;"></textarea>
+                </div>
+                <button type="submit" class="btn-accent">Send Message <i class="fas fa-arrow-right ml-2"></i></button>
+            </form>
+        </div>
+    </div>
+</section>
+
+
+<!-- ==================== ADMIN PANEL ==================== -->
+<section class="page-section" id="sectionAdmin" style="display:none;">
+    <aside class="admin-sidebar">
+        <div class="px-6 mb-8 flex items-center gap-3">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+            <div>
+                <div class="font-display font-bold text-sm" style="color:var(--fg-warm);">Stars Meet Investors</div>
+                <div style="color:var(--fg-dim);font-size:0.68rem;">Admin Panel</div>
+            </div>
+        </div>
+        <div class="admin-nav-item active" onclick="showAdminTab('dashboard')"><i class="fas fa-th-large w-5 text-center"></i> Dashboard</div>
+        <div class="admin-nav-item" onclick="showAdminTab('registrations')"><i class="fas fa-file-alt w-5 text-center"></i> Registrations</div>
+        <div class="admin-nav-item" onclick="showAdminTab('cashComplete')"><i class="fas fa-money-bill-wave w-5 text-center"></i> Cash Payment</div>
+        <div class="admin-nav-item" onclick="showAdminTab('staff')"><i class="fas fa-users-cog w-5 text-center"></i> Staff Management</div>
+        <div class="admin-nav-item" onclick="showAdminTab('codes')"><i class="fas fa-barcode w-5 text-center"></i> Generated Codes</div>
+        <div style="border-top:1px solid var(--border);margin:20px 0;"></div>
+        <div class="admin-nav-item" onclick="handleLogout()"><i class="fas fa-sign-out-alt w-5 text-center"></i> Logout</div>
+        <div style="padding:16px 24px;margin-top:auto;">
+            <div class="flex items-center gap-3">
+                <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="w-9 h-9 rounded-full object-cover" alt="Admin" style="border:2px solid var(--accent);">
+                <div>
+                    <div class="text-sm font-semibold" id="adminDisplayName">Admin</div>
+                    <div style="color:var(--fg-dim);font-size:0.68rem;" id="adminDisplayRole">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <main class="admin-main">
+        <!-- Dashboard -->
+        <div class="admin-tab active" id="tabDashboard">
+            <h2 class="font-display text-2xl font-bold mb-8">Dashboard Overview</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div class="feature-card">
+                    <div style="color:var(--fg-muted);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Total</div>
+                    <div class="stat-number accent-text font-display mt-2" id="dashTotalReg">0</div>
+                </div>
+                <div class="feature-card">
+                    <div style="color:var(--fg-muted);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Completed</div>
+                    <div class="stat-number font-display mt-2" style="color:#8fd68f;" id="dashCompleted">0</div>
+                </div>
+                <div class="feature-card">
+                    <div style="color:var(--fg-muted);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Pending</div>
+                    <div class="stat-number font-display mt-2" style="color:var(--accent-bright);" id="dashPending">0</div>
+                </div>
+                <div class="feature-card">
+                    <div style="color:var(--fg-muted);font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Staff</div>
+                    <div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashStaff">0</div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <h3 class="font-bold text-lg mb-4">Recent Registrations</h3>
+                <div style="overflow-x:auto;">
+                    <table class="data-table"><thead><tr><th>Unique ID</th><th>Business Name</th><th>Representative</th><th>Status</th><th>Date</th></tr></thead><tbody id="dashRecentBody"></tbody></table>
+                </div>
+                <div id="dashNoData" class="text-center py-8" style="color:var(--fg-dim);">No registrations yet.</div>
+            </div>
+        </div>
+
+        <!-- Registrations -->
+        <div class="admin-tab" id="tabRegistrations" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">All Registrations</h2>
+                <div class="flex gap-3">
+                    <input type="text" class="form-input" id="searchReg" placeholder="Search name or ID..." style="width:250px;padding:10px 14px;font-size:0.88rem;" oninput="renderRegistrations()">
+                    <select class="form-input" id="filterStatus" style="width:150px;padding:10px 14px;font-size:0.88rem;" onchange="renderRegistrations()">
+                        <option value="all">All Status</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;">
+                    <table class="data-table"><thead><tr><th>Unique ID</th><th>Business Name</th><th>Representative</th><th>Email</th><th>Industry</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="allRegBody"></tbody></table>
+                </div>
+                <div id="allRegNoData" class="text-center py-12" style="color:var(--fg-dim);">No registrations found.</div>
+            </div>
+        </div>
+
+        <!-- Cash Complete -->
+        <div class="admin-tab" id="tabCashComplete" style="display:none;">
+            <h2 class="font-display text-2xl font-bold mb-2">Complete Cash Payment</h2>
+            <p style="color:var(--fg-muted);margin-bottom:24px;">Enter the Unique ID generated for a cash-payment registration to complete it.</p>
+            <div class="feature-card" style="max-width:600px;">
+                <form onsubmit="handleCashComplete(event)">
+                    <div class="form-group">
+                        <label class="form-label">Unique ID / Code *</label>
+                        <input type="text" class="form-input" id="cashCodeInput" placeholder="e.g. SMI-XXXX-XXXX" required style="font-family:monospace;font-size:1.1rem;letter-spacing:0.05em;">
+                    </div>
+                    <button type="submit" class="btn-accent"><i class="fas fa-check-circle mr-2"></i>Lookup and Complete</button>
+                </form>
+                <div id="cashResult" style="margin-top:24px;display:none;"></div>
+            </div>
+        </div>
+
+        <!-- Staff -->
+        <div class="admin-tab" id="tabStaff" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Staff Management</h2>
+                <button class="btn-accent" onclick="showAddStaffForm()" id="addStaffBtn"><i class="fas fa-user-plus mr-2"></i>Add Staff</button>
+            </div>
+            <div id="addStaffForm" style="display:none;" class="feature-card mb-8 max-w-lg">
+                <h3 class="font-bold text-lg mb-4">New Staff Account</h3>
+                <form onsubmit="handleAddStaff(event)">
+                    <div class="form-group"><label class="form-label">Full Name *</label><input type="text" class="form-input" id="staffName" placeholder="Staff full name" required></div>
+                    <div class="form-group"><label class="form-label">Username *</label><input type="text" class="form-input" id="staffUsername" placeholder="Login username" required></div>
+                    <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-input" id="staffPassword" placeholder="Minimum 6 characters" required minlength="6"></div>
+                    <div class="form-group"><label class="form-label">Role</label><select class="form-input" id="staffRole"><option value="staff">Staff (View Only)</option><option value="editor">Editor (View + Edit)</option></select></div>
+                    <div class="flex gap-3"><button type="submit" class="btn-accent">Create Account</button><button type="button" class="btn-outline" onclick="hideAddStaffForm()">Cancel</button></div>
+                </form>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <table class="data-table"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead><tbody id="staffTableBody"></tbody></table>
+                <div id="staffNoData" class="text-center py-12" style="color:var(--fg-dim);">No staff accounts.</div>
+            </div>
+        </div>
+
+        <!-- Codes -->
+        <div class="admin-tab" id="tabCodes" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Generated Payment Codes</h2>
+                <button class="btn-accent" onclick="generateNewCode()"><i class="fas fa-plus mr-2"></i>Generate New Code</button>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <table class="data-table"><thead><tr><th>Code</th><th>Status</th><th>Created</th><th>Used By</th></tr></thead><tbody id="codesTableBody"></tbody></table>
+                <div id="codesNoData" class="text-center py-12" style="color:var(--fg-dim);">No codes generated.</div>
+            </div>
+        </div>
+    </main>
+</section>
+
+
+<script>
+// ==================== DATA ====================
+const LOGO_URL = 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg';
+
+const GALLERY_IMAGES = [
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0009.jpg', caption: 'Investor Pitch Session' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0010.jpg', caption: 'Networking Breakfast' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0011.jpg', caption: 'Panel Discussion' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0012.jpg', caption: 'Deal Signing Ceremony' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0013.jpg', caption: 'Business Showcase' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0015.jpg', caption: 'Awards Night' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0016(1).jpg', caption: 'Workshop Session' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0016.jpg', caption: 'Closing Gala' },
+    { src: 'https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0017.jpg', caption: 'Investor Roundtable' },
+    { src: LOGO_URL, caption: 'Stars Meet Investors' },
+];
+
+// ==================== STORAGE ====================
+function getData(key, fallback) {
+    try { const d = localStorage.getItem('smi_' + key); return d ? JSON.parse(d) : fallback; } catch { return fallback; }
+}
+function setData(key, val) { localStorage.setItem('smi_' + key, JSON.stringify(val)); }
+
+function initDefaults() {
+    if (!getData('users', null)) {
+        setData('users', [{ username: 'admin', password: 'starsmeet2025', role: 'admin', name: 'Super Admin', created: new Date().toISOString() }]);
+    }
+    if (!getData('registrations', null)) setData('registrations', []);
+    if (!getData('codes', null)) setData('codes', []);
+}
+
+// ==================== UNIQUE ID ====================
+function generateUniqueID() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s1 = '', s2 = '';
+    for (let i = 0; i < 4; i++) { s1 += c[Math.floor(Math.random() * c.length)]; s2 += c[Math.floor(Math.random() * c.length)]; }
+    return 'SMI-' + s1 + '-' + s2;
+}
+
+// ==================== TOAST ====================
+function showToast(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    t.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i>' + msg;
+    c.appendChild(t);
+    setTimeout(() => { if (t.parentNode) t.remove(); }, 4200);
+}
+
+// ==================== NAVIGATION ====================
+let currentSection = 'home';
+
+function showSection(name) {
+    document.querySelectorAll('.page-section').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+    const t = document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (t) { t.style.display = 'block'; t.classList.add('active'); }
+    document.querySelectorAll('[data-nav]').forEach(l => l.classList.remove('active'));
+    const a = document.querySelector('[data-nav="' + name + '"]');
+    if (a) a.classList.add('active');
+    document.getElementById('mainNav').style.display = (name === 'admin') ? 'none' : '';
+    currentSection = name;
+    window.scrollTo(0, 0);
+    setTimeout(initRevealAnimations, 100);
+    if (name === 'admin') refreshAdminData();
+}
+
+function toggleMobileMenu() {
+    const m = document.getElementById('mobileMenu');
+    const i = document.getElementById('menuIcon');
+    m.classList.toggle('hidden');
+    i.className = m.classList.contains('hidden') ? 'fas fa-bars' : 'fas fa-times';
+}
+
+// ==================== HIDDEN ADMIN LOGIN ====================
+let tapCount = 0, tapTimer = null;
+document.getElementById('adminTrigger').addEventListener('click', function(e) {
+    e.preventDefault();
+    tapCount++;
+    clearTimeout(tapTimer);
+    if (tapCount >= 5) { tapCount = 0; openAdminLogin(); }
+    else { tapTimer = setTimeout(() => { tapCount = 0; }, 1500); }
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'A') { e.preventDefault(); openAdminLogin(); }
+});
+
+function openAdminLogin() {
+    document.getElementById('adminLoginModal').classList.add('show');
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+    setTimeout(() => document.getElementById('adminUser').focus(), 100);
+}
+function closeAdminLogin() { document.getElementById('adminLoginModal').classList.remove('show'); }
+document.getElementById('adminLoginModal').addEventListener('click', function(e) { if (e.target === this) closeAdminLogin(); });
+
+// ==================== AUTH ====================
+let currentUser = null;
+
+function handleAdminLogin(e) {
+    e.preventDefault();
+    const u = document.getElementById('adminUser').value.trim();
+    const p = document.getElementById('adminPass').value;
+    const users = getData('users', []);
+    const user = users.find(x => x.username === u && x.password === p);
+    if (user) {
+        currentUser = user;
+        closeAdminLogin();
+        showToast('Welcome back, ' + user.name, 'success');
+        document.getElementById('adminDisplayName').textContent = user.name;
+        document.getElementById('adminDisplayRole').textContent = user.role === 'admin' ? 'Administrator' : (user.role === 'editor' ? 'Editor' : 'Staff');
+        document.getElementById('addStaffBtn').style.display = user.role === 'admin' ? '' : 'none';
+        showSection('admin');
+        showAdminTab('dashboard');
+    } else {
+        showToast('Invalid credentials. Access denied.', 'error');
+    }
+}
+
+function handleLogout() { currentUser = null; showSection('home'); showToast('Logged out.', 'info'); }
+
+// ==================== ADMIN TABS ====================
+function showAdminTab(tab) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
+    const map = { dashboard: 'tabDashboard', registrations: 'tabRegistrations', cashComplete: 'tabCashComplete', staff: 'tabStaff', codes: 'tabCodes' };
+    const el = document.getElementById(map[tab]);
+    if (el) el.style.display = 'block';
+    const idx = Object.keys(map).indexOf(tab);
+    const items = document.querySelectorAll('.admin-nav-item');
+    if (items[idx]) items[idx].classList.add('active');
+    refreshAdminData();
+}
+
+// ==================== REGISTRATION ====================
+function handleRegistration(e) {
+    e.preventDefault();
+    const reg = {
+        uniqueId: generateUniqueID(),
+        entityName: document.getElementById('regEntityName').value.trim(),
+        regNumber: document.getElementById('regRegNumber').value.trim(),
+        fullName: document.getElementById('regFullName').value.trim(),
+        email: document.getElementById('regEmail').value.trim(),
+        phone: document.getElementById('regPhone').value.trim(),
+        industry: document.getElementById('regIndustry').value,
+        stage: document.getElementById('regStage').value,
+        capital: document.getElementById('regCapital').value.trim(),
+        address: document.getElementById('regAddress').value.trim(),
+        description: document.getElementById('regDescription').value.trim(),
+        status: 'completed',
+        paymentMethod: 'online',
+        date: new Date().toISOString(),
+        profilePhoto: LOGO_URL
+    };
+    const regs = getData('registrations', []);
+    regs.push(reg);
+    setData('registrations', regs);
+    generateRegistrationPDF(reg);
+    document.getElementById('registrationForm').reset();
+    showToast('Registration successful! Your watermarked PDF has been downloaded.', 'success');
+}
+
+// ==================== PDF ====================
+function generateRegistrationPDF(reg) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pW = 210, pH = 297, m = 20;
+    let y = 15;
+    const wm = 'STARS MEET INVESTORS';
+
+    // Background
+    doc.setFillColor(10, 6, 5);
+    doc.rect(0, 0, pW, pH, 'F');
+
+    // Diagonal watermark
+    doc.saveGraphicsState();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(48);
+    doc.setTextColor(200, 149, 108, 0.05);
+    for (let r = -2; r < 8; r++) {
+        for (let c = -1; c < 3; c++) {
+            doc.text(wm, c * 100 + (r % 2) * 50 - 40, r * 45, { angle: -30 });
+        }
+    }
+    doc.restoreGraphicsState();
+
+    // Gold top bar
+    doc.setFillColor(200, 149, 108);
+    doc.rect(0, 0, pW, 4, 'F');
+
+    // Header
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(200, 149, 108);
+    doc.text(wm, pW / 2, y + 10, { align: 'center' });
+    y += 18;
+
+    doc.setDrawColor(200, 149, 108, 0.3);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pW - m, y);
+    y += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(160, 145, 128);
+    doc.text('OFFICIAL REGISTRATION CERTIFICATE', pW / 2, y, { align: 'center' });
+    y += 14;
+
+    // Unique ID box
+    doc.setFillColor(18, 14, 12);
+    doc.roundedRect(m, y, pW - m * 2, 16, 3, 3, 'F');
+    doc.setDrawColor(200, 149, 108, 0.35);
+    doc.roundedRect(m, y, pW - m * 2, 16, 3, 3, 'S');
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(200, 149, 108);
+    doc.text('REGISTRATION ID: ' + reg.uniqueId, pW / 2, y + 10, { align: 'center' });
+    y += 26;
+
+    // Profile photo with watermark
+    const ps = 30, px = pW - m - ps;
+    doc.setFillColor(25, 20, 17);
+    doc.circle(px + ps / 2, y + ps / 2, ps / 2 + 2, 'F');
+    doc.setDrawColor(200, 149, 108);
+    doc.setLineWidth(1);
+    doc.circle(px + ps / 2, y + ps / 2, ps / 2 + 2, 'S');
+    try { doc.addImage(reg.profilePhoto, 'JPEG', px, y, ps, ps, undefined, 'MEDIUM'); } catch(e) {}
+    doc.saveGraphicsState();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.5);
+    doc.setTextColor(200, 149, 108, 0.5);
+    doc.text('SMI VERIFIED', px + ps / 2, y + ps / 2 + 1, { angle: -30, align: 'center' });
+    doc.restoreGraphicsState();
+
+    // Fields
+    const fields = [
+        ['Business Name', reg.entityName],
+        ['Registration Number', reg.regNumber || 'N/A'],
+        ['Representative', reg.fullName],
+        ['Email', reg.email],
+        ['Phone', reg.phone],
+        ['Industry', reg.industry],
+        ['Stage', reg.stage],
+        ['Capital Seeking', reg.capital ? '$' + reg.capital : 'Not specified'],
+        ['Address', reg.address],
+    ];
+
+    doc.setFont('helvetica', 'normal');
+    fields.forEach(([label, value]) => {
+        if (y > pH - 80) {
+            doc.addPage();
+            doc.setFillColor(10, 6, 5); doc.rect(0, 0, pW, pH, 'F');
+            doc.setFillColor(200, 149, 108); doc.rect(0, 0, pW, 2, 'F');
+            doc.saveGraphicsState(); doc.setFont('helvetica','bold'); doc.setFontSize(48);
+            doc.setTextColor(200,149,108,0.05);
+            for(let r=-2;r<8;r++) for(let c=-1;c<3;c++) doc.text(wm,c*100+(r%2)*50-40,r*45,{angle:-30});
+            doc.restoreGraphicsState();
+            y = 15;
+        }
+        doc.setFontSize(8.5); doc.setTextColor(120, 108, 95);
+        doc.text(label + ':', m, y);
+        doc.setFontSize(10); doc.setTextColor(240, 235, 228);
+        const lines = doc.splitTextToSize(value || 'N/A', px - m - 10);
+        doc.text(lines, m + 45, y);
+        y += Math.max(8, lines.length * 5.5 + 3);
+    });
+
+    y += 6;
+    doc.setFontSize(8.5); doc.setTextColor(120, 108, 95);
+    doc.text('Description:', m, y); y += 6;
+    doc.setFontSize(9.5); doc.setTextColor(220, 215, 205);
+    const dl = doc.splitTextToSize(reg.description || 'N/A', pW - m * 2);
+    doc.text(dl, m, y);
+    y += dl.length * 5 + 12;
+
+    // Status bar
+    doc.setFillColor(18, 14, 12);
+    doc.roundedRect(m, y, pW - m * 2, 18, 3, 3, 'F');
+    const sc = reg.status === 'completed' ? [143, 214, 143] : [228, 176, 138];
+    doc.setFontSize(9); doc.setTextColor(...sc);
+    doc.text('STATUS: ' + reg.status.toUpperCase(), m + 8, y + 8);
+    doc.setTextColor(140, 125, 110);
+    doc.text('DATE: ' + new Date(reg.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), m + 8, y + 14);
+    doc.text('Payment: ' + (reg.paymentMethod || 'online').toUpperCase(), pW - m - 40, y + 11);
+    y += 28;
+
+    // Footer
+    doc.setDrawColor(200, 149, 108, 0.15);
+    doc.line(m, y, pW - m, y); y += 8;
+    doc.setFontSize(7.5); doc.setTextColor(90, 80, 70);
+    doc.text('This document is computer-generated and serves as official proof of registration with Stars Meet Investors.', pW / 2, y, { align: 'center' });
+    y += 5;
+    doc.text('Watermark authenticates origin. Unauthorized reproduction is prohibited.', pW / 2, y, { align: 'center' });
+    y += 5;
+    doc.text('Verification: info@starsmeetinvestors.com | ID: ' + reg.uniqueId, pW / 2, y, { align: 'center' });
+
+    doc.save('SMI_Registration_' + reg.uniqueId + '.pdf');
+}
+
+// ==================== CASH PAYMENT ====================
+function generateNewCode() {
+    if (!currentUser || currentUser.role !== 'admin') { showToast('Only admins can generate codes.', 'error'); return; }
+    const code = generateUniqueID();
+    const codes = getData('codes', []);
+    codes.push({ code, status: 'available', created: new Date().toISOString(), usedBy: null });
+    setData('codes', codes);
+    showToast('Code generated: ' + code, 'success');
+    renderCodes();
+}
+
+function handleCashComplete(e) {
+    e.preventDefault();
+    const input = document.getElementById('cashCodeInput').value.trim().toUpperCase();
+    const rd = document.getElementById('cashResult');
+    const regs = getData('registrations', []);
+    const codes = getData('codes', []);
+    const ri = regs.findIndex(r => r.uniqueId === input);
+
+    if (ri === -1) {
+        const ci = codes.findIndex(c => c.code === input && c.status === 'available');
+        if (ci === -1) {
+            rd.style.display = 'block';
+            rd.innerHTML = '<div style="padding:16px;border-radius:10px;background:rgba(201,64,64,0.1);border:1px solid rgba(201,64,64,0.3);color:#e68a8a;"><i class="fas fa-exclamation-triangle mr-2"></i>No pending registration or available code found.</div>';
+            return;
+        }
+        rd.style.display = 'block';
+        rd.innerHTML = '<div style="padding:20px;border-radius:10px;background:rgba(200,149,108,0.1);border:1px solid rgba(200,149,108,0.3);color:var(--accent-bright);"><i class="fas fa-info-circle mr-2"></i>Code <strong>' + input + '</strong> is available. Share it with the business for their registration.</div>';
+        return;
+    }
+
+    const reg = regs[ri];
+    if (reg.status === 'completed') {
+        rd.style.display = 'block';
+        rd.innerHTML = '<div style="padding:20px;border-radius:10px;background:rgba(91,168,91,0.1);border:1px solid rgba(91,168,91,0.3);color:#8fd68f;"><i class="fas fa-check-circle mr-2"></i><strong>' + reg.entityName + '</strong> is already completed.</div>';
+        return;
+    }
+    if (reg.status === 'rejected') {
+        rd.style.display = 'block';
+        rd.innerHTML = '<div style="padding:20px;border-radius:10px;background:rgba(201,64,64,0.1);border:1px solid rgba(201,64,64,0.3);color:#e68a8a;"><i class="fas fa-ban mr-2"></i>This registration has been rejected.</div>';
+        return;
+    }
+
+    rd.style.display = 'block';
+    rd.innerHTML = '<div style="padding:24px;border-radius:14px;background:rgba(200,149,108,0.05);border:1px solid rgba(200,149,108,0.18);">' +
+        '<h4 class="font-bold text-lg mb-4" style="color:var(--accent-bright);">Pending Registration Found</h4>' +
+        '<div class="grid grid-cols-2 gap-3 text-sm">' +
+        '<div><span style="color:var(--fg-muted);">Business:</span> <strong>' + reg.entityName + '</strong></div>' +
+        '<div><span style="color:var(--fg-muted);">ID:</span> <strong style="font-family:monospace;">' + reg.uniqueId + '</strong></div>' +
+        '<div><span style="color:var(--fg-muted);">Rep:</span> <strong>' + reg.fullName + '</strong></div>' +
+        '<div><span style="color:var(--fg-muted);">Email:</span> <strong>' + reg.email + '</strong></div>' +
+        '<div><span style="color:var(--fg-muted);">Industry:</span> <strong>' + reg.industry + '</strong></div>' +
+        '<div><span style="color:var(--fg-muted);">Stage:</span> <strong>' + reg.stage + '</strong></div>' +
+        '</div><div style="margin-top:20px;display:flex;gap:10px;">' +
+        '<button class="btn-accent" onclick="confirmCashComplete(' + ri + ')"><i class="fas fa-check mr-2"></i>Confirm & Complete</button>' +
+        '<button class="btn-outline" onclick="rejectCashReg(' + ri + ')" style="border-color:var(--danger);color:var(--danger);">Reject</button>' +
+        '</div></div>';
+}
+
+function confirmCashComplete(idx) {
+    const regs = getData('registrations', []);
+    regs[idx].status = 'completed';
+    regs[idx].paymentMethod = 'cash';
+    regs[idx].completedDate = new Date().toISOString();
+    setData('registrations', regs);
+    const codes = getData('codes', []);
+    const ci = codes.findIndex(c => c.code === regs[idx].uniqueId);
+    if (ci !== -1) { codes[ci].status = 'used'; codes[ci].usedBy = regs[idx].entityName; setData('codes', codes); }
+    generateRegistrationPDF(regs[idx]);
+    document.getElementById('cashResult').innerHTML = '<div style="padding:20px;border-radius:10px;background:rgba(91,168,91,0.1);border:1px solid rgba(91,168,91,0.3);color:#8fd68f;"><i class="fas fa-check-circle mr-2"></i>Completed! PDF generated for <strong>' + regs[idx].email + '</strong>.</div>';
+    showToast('Cash payment registration completed.', 'success');
+    refreshAdminData();
+}
+
+function rejectCashReg(idx) {
+    const regs = getData('registrations', []);
+    regs[idx].status = 'rejected';
+    setData('registrations', regs);
+    document.getElementById('cashResult').innerHTML = '<div style="padding:20px;border-radius:10px;background:rgba(201,64,64,0.1);border:1px solid rgba(201,64,64,0.3);color:#e68a8a;"><i class="fas fa-ban mr-2"></i>Rejected.</div>';
+    showToast('Registration rejected.', 'error');
+    refreshAdminData();
+}
+
+// ==================== STAFF ====================
+function showAddStaffForm() { document.getElementById('addStaffForm').style.display = 'block'; }
+function hideAddStaffForm() { document.getElementById('addStaffForm').style.display = 'none'; }
+
+function handleAddStaff(e) {
+    e.preventDefault();
+    if (!currentUser || currentUser.role !== 'admin') { showToast('Only admins can add staff.', 'error'); return; }
+    const name = document.getElementById('staffName').value.trim();
+    const username = document.getElementById('staffUsername').value.trim();
+    const password = document.getElementById('staffPassword').value;
+    const role = document.getElementById('staffRole').value;
+    const users = getData('users', []);
+    if (users.find(u => u.username === username)) { showToast('Username already exists.', 'error'); return; }
+    users.push({ username, password, role, name, created: new Date().toISOString() });
+    setData('users', users);
+    hideAddStaffForm(); e.target.reset();
+    showToast('Staff created: ' + name, 'success');
+    renderStaff(); refreshAdminData();
+}
+
+function deleteStaff(username) {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    if (username === 'admin') { showToast('Cannot delete primary admin.', 'error'); return; }
+    let users = getData('users', []);
+    users = users.filter(u => u.username !== username);
+    setData('users', users);
+    showToast('Registered removed.', 'info');
+    renderStaff(); refreshAdminData();
+}
+
+// ==================== RENDERS ====================
+function refreshAdminData() {
+    const regs = getData('registrations', []);
+    const users = getData('users', []);
+    document.getElementById('dashTotalReg').textContent = regs.length;
+    document.getElementById('dashCompleted').textContent = regs.filter(r => r.status === 'completed').length;
+    document.getElementById('dashPending').textContent = regs.filter(r => r.status === 'pending').length;
+    document.getElementById('dashStaff').textContent = users.length;
+
+    const rb = document.getElementById('dashRecentBody');
+    const nd = document.getElementById('dashNoData');
+    if (regs.length === 0) { rb.innerHTML = ''; nd.style.display = ''; }
+    else {
+        nd.style.display = 'none';
+        rb.innerHTML = regs.slice(-5).reverse().map(r => '<tr>' +
+            '<td style="font-family:monospace;font-size:0.84rem;color:var(--accent);">' + r.uniqueId + '</td>' +
+            '<td>' + r.entityName + '</td><td>' + r.fullName + '</td>' +
+            '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>' +
+            '<td style="color:var(--fg-dim);font-size:0.84rem;">' + new Date(r.date).toLocaleDateString() + '</td></tr>').join('');
+    }
+    renderRegistrations(); renderStaff(); renderCodes();
+}
+
+function renderRegistrations() {
+    const s = (document.getElementById('searchReg')?.value || '').toLowerCase();
+    const f = document.getElementById('filterStatus')?.value || 'all';
+    let regs = getData('registrations', []);
+    if (s) regs = regs.filter(r => r.entityName.toLowerCase().includes(s) || r.uniqueId.toLowerCase().includes(s) || r.fullName.toLowerCase().includes(s));
+    if (f !== 'all') regs = regs.filter(r => r.status === f);
+    const b = document.getElementById('allRegBody');
+    const nd = document.getElementById('allRegNoData');
+    if (regs.length === 0) { b.innerHTML = ''; nd.style.display = ''; }
+    else {
+        nd.style.display = 'none';
+        b.innerHTML = regs.reverse().map(r => '<tr>' +
+            '<td style="font-family:monospace;font-size:0.84rem;color:var(--accent);">' + r.uniqueId + '</td>' +
+            '<td>' + r.entityName + '</td><td>' + r.fullName + '</td>' +
+            '<td style="color:var(--fg-muted);font-size:0.84rem;">' + r.email + '</td>' +
+            '<td>' + r.industry + '</td>' +
+            '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>' +
+            '<td style="color:var(--fg-dim);font-size:0.84rem;">' + new Date(r.date).toLocaleDateString() + '</td>' +
+            '<td>' +
+            (r.status === 'completed' ? '<button onclick="reprintPDF(\'' + r.uniqueId + '\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:0.84rem;padding:4px 8px;" title="Reprint PDF"><i class="fas fa-file-pdf"></i></button>' : '') +
+            (r.status === 'pending' ? '<button onclick="quickComplete(\'' + r.uniqueId + '\')" style="background:none;border:none;color:#8fd68f;cursor:pointer;font-size:0.84rem;padding:4px 8px;" title="Complete"><i class="fas fa-check"></i></button>' +
+            '<button onclick="quickReject(\'' + r.uniqueId + '\')" style="background:none;border:none;color:#e68a8a;cursor:pointer;font-size:0.84rem;padding:4px 8px;" title="Reject"><i class="fas fa-times"></i></button>' : '') +
+            '</td></tr>').join('');
+    }
+}
+
+function reprintPDF(id) { const r = getData('registrations', []).find(x => x.uniqueId === id); if (r) generateRegistrationPDF(r); }
+function quickComplete(id) { const i = getData('registrations', []).findIndex(r => r.uniqueId === id); if (i !== -1) confirmCashComplete(i); }
+function quickReject(id) { const i = getData('registrations', []).findIndex(r => r.uniqueId === id); if (i !== -1) rejectCashReg(i); }
+
+function renderStaff() {
+    const users = getData('users', []);
+    const b = document.getElementById('staffTableBody');
+    const nd = document.getElementById('staffNoData');
+    if (users.length === 0) { b.innerHTML = ''; nd.style.display = ''; }
+    else {
+        nd.style.display = 'none';
+        b.innerHTML = users.map(u => '<tr><td>' + u.name + '</td>' +
+            '<td style="font-family:monospace;font-size:0.88rem;">' + u.username + '</td>' +
+            '<td><span class="badge" style="background:var(--accent-glow);color:var(--accent-bright);">' + u.role + '</span></td>' +
+            '<td style="color:var(--fg-dim);font-size:0.84rem;">' + new Date(u.created).toLocaleDateString() + '</td>' +
+            '<td>' + (u.username !== 'admin' ? '<button onclick="deleteStaff(\'' + u.username + '\')" style="background:none;border:none;color:#e68a8a;cursor:pointer;font-size:0.84rem;"><i class="fas fa-trash-alt"></i></button>' : '<span style="color:var(--fg-dim);font-size:0.78rem;">Protected</span>') + '</td></tr>').join('');
+    }
+}
+
+function renderCodes() {
+    const codes = getData('codes', []);
+    const b = document.getElementById('codesTableBody');
+    const nd = document.getElementById('codesNoData');
+    if (codes.length === 0) { b.innerHTML = ''; nd.style.display = ''; }
+    else {
+        nd.style.display = 'none';
+        b.innerHTML = codes.slice().reverse().map(c => '<tr>' +
+            '<td style="font-family:monospace;font-size:0.92rem;color:var(--accent-bright);letter-spacing:0.04em;">' + c.code + '</td>' +
+            '<td><span class="badge badge-' + (c.status === 'available' ? 'pending' : 'completed') + '">' + c.status + '</span></td>' +
+            '<td style="color:var(--fg-dim);font-size:0.84rem;">' + new Date(c.created).toLocaleDateString() + '</td>' +
+            '<td style="color:var(--fg-dim);font-size:0.84rem;">' + (c.usedBy || '—') + '</td></tr>').join('');
+    }
+}
+
+// ==================== CONTACT ====================
+function handleContact(e) { e.preventDefault(); showToast('Message received. We will respond shortly.', 'success'); e.target.reset(); }
+
+// ==================== GALLERY ====================
+function initGallery() {
+    const g = document.getElementById('galleryGrid');
+    g.innerHTML = GALLERY_IMAGES.map((img, i) => {
+        const span = (i === 0 || i === 5) ? 'md:col-span-2 md:row-span-2' : '';
+        const h = (i === 0 || i === 5) ? 'h-64 md:h-full' : 'h-48 md:h-56';
+        return '<div class="gallery-img ' + h + ' ' + span + '" onclick="openLightbox(\'' + img.src + '\')">' +
+            '<img src="' + img.src + '" alt="' + img.caption + '" loading="lazy">' +
+            '<div class="gallery-overlay"><span class="text-sm font-semibold">' + img.caption + '</span></div></div>';
+    }).join('');
+}
+function openLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.add('show'); }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+// ==================== PARTICLES ====================
+function initParticles() {
+    const cv = document.getElementById('bgCanvas');
+    const ctx = cv.getContext('2d');
+    let w, h, pts = [];
+    const N = 50;
+    function resize() { w = cv.width = window.innerWidth; h = cv.height = window.innerHeight; }
+    resize(); window.addEventListener('resize', resize);
+    for (let i = 0; i < N; i++) pts.push({ x: Math.random()*w, y: Math.random()*h, vx: (Math.random()-0.5)*0.25, vy: (Math.random()-0.5)*0.25, r: Math.max(0.5, Math.random()*1.8), a: Math.random()*0.2+0.04 });
+    function draw() {
+        ctx.clearRect(0, 0, w, h);
+        pts.forEach(p => {
+            p.x += p.vx; p.y += p.vy;
+            if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+            if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(0.1, p.r), 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200,149,108,' + p.a + ')';
+            ctx.fill();
+        });
+        for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+            const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
+            const d = Math.sqrt(dx*dx + dy*dy);
+            if (d < 140) { ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.strokeStyle = 'rgba(200,149,108,' + (0.03*(1-d/140)) + ')'; ctx.lineWidth = 0.5; ctx.stroke(); }
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// ==================== ANIMATIONS ====================
+function initRevealAnimations() {
+    const els = document.querySelectorAll('.reveal:not(.visible)');
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach((e, i) => { if (e.isIntersecting) { setTimeout(() => e.target.classList.add('visible'), i * 80); obs.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    els.forEach(el => obs.observe(el));
+}
+
+function initCounters() {
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                const el = e.target, t = parseInt(el.dataset.count);
+                let c = 0; const s = Math.max(1, Math.floor(t / 60));
+                const timer = setInterval(() => { c += s; if (c >= t) { c = t; clearInterval(timer); } el.textContent = c + '+'; }, 25);
+                obs.unobserve(el);
+            }
+        });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('[data-count]').forEach(c => obs.observe(c));
+}
+
+function initNavScroll() {
+    window.addEventListener('scroll', () => {
+        const n = document.getElementById('mainNav');
+        n.style.boxShadow = window.scrollY > 50 ? '0 4px 30px rgba(0,0,0,0.35)' : 'none';
+    });
+}
+
+// ==================== INIT ====================
+document.addEventListener('DOMContentLoaded', () => {
+    initDefaults();
+    initGallery();
+    initParticles();
+    initRevealAnimations();
+    initCounters();
+    initNavScroll();
+});
+</script>
+</body>
+</html>
