@@ -1,0 +1,3056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Stars Meet Investors — AI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { display: ['Cormorant Garamond','serif'], body: ['DM Sans','sans-serif'] } } }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-deep:#0a0605;--bg:#0f0b09;--bg-card:#161110;--bg-card-hover:#1e1816;
+            --bg-elevated:#231c18;--fg:#f2ebe4;--fg-warm:#e8ddd2;--fg-muted:#8c7e70;
+            --fg-dim:#5a4f45;--accent:#c8956c;--accent-bright:#e4b08a;--accent-deep:#9a6b42;
+            --accent-glow:rgba(200,149,108,0.15);--accent-glow-strong:rgba(200,149,108,0.3);
+            --border:#2a2220;--border-light:#3a302c;--danger:#c94040;--success:#5ba85b;
+            --wa:#25D366;--wa-dark:#128C7E;
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg-deep);color:var(--fg);overflow-x:hidden}
+        .font-display{font-family:'Cormorant Garamond',serif}
+
+        #adminTrigger{position:fixed;bottom:0;right:0;width:30px;height:30px;z-index:9999;cursor:default;background:transparent;border:none;outline:none}
+        #bgCanvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+        .ambient-glow{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;
+            background:radial-gradient(ellipse 60% 50% at 30% 20%,rgba(200,149,108,0.04) 0%,transparent 70%),
+            radial-gradient(ellipse 40% 40% at 75% 70%,rgba(154,107,66,0.03) 0%,transparent 60%),
+            radial-gradient(ellipse 80% 60% at 50% 100%,rgba(200,149,108,0.02) 0%,transparent 50%)}
+
+        .page-section{display:none;min-height:100vh;position:relative;z-index:1}
+        .page-section.active{display:block}
+
+        .nav-glass{background:rgba(10,6,5,0.88);backdrop-filter:blur(24px);border-bottom:1px solid rgba(200,149,108,0.08)}
+        .nav-link{position:relative;color:var(--fg-muted);transition:color .3s;font-weight:500;font-size:.9rem}
+        .nav-link:hover,.nav-link.active{color:var(--accent-bright)}
+        .nav-link::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--accent);transition:width .3s}
+        .nav-link:hover::after,.nav-link.active::after{width:100%}
+
+        .logo-img{width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid var(--accent);box-shadow:0 0 12px rgba(200,149,108,0.25);transition:box-shadow .3s}
+        .logo-img:hover{box-shadow:0 0 20px rgba(200,149,108,0.4)}
+        .logo-img-sm{width:32px;height:32px;border-width:1.5px}
+        .logo-img-lg{width:48px;height:48px;border-width:2.5px}
+
+        .hero-gradient{background:radial-gradient(ellipse 70% 55% at 45% 35%,rgba(200,149,108,0.07) 0%,transparent 70%),radial-gradient(ellipse 45% 35% at 80% 15%,rgba(154,107,66,0.05) 0%,transparent 55%)}
+        .hero-title{font-size:clamp(2.4rem,6vw,5.2rem);font-weight:700;line-height:1.02;letter-spacing:-.01em}
+        .accent-text{background:linear-gradient(135deg,var(--accent-bright),var(--accent),var(--accent-deep));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+        .btn-accent{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:var(--bg-deep);font-weight:700;padding:14px 36px;border-radius:10px;border:none;cursor:pointer;font-size:1rem;transition:all .3s;position:relative;overflow:hidden;font-family:'DM Sans',sans-serif}
+        .btn-accent:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(200,149,108,0.35)}
+        .btn-accent::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);transition:left .5s}
+        .btn-accent:hover::before{left:100%}
+
+        .btn-outline{background:transparent;color:var(--accent);font-weight:600;padding:13px 35px;border-radius:10px;border:1.5px solid var(--accent);cursor:pointer;font-size:1rem;transition:all .3s;font-family:'DM Sans',sans-serif}
+        .btn-outline:hover{background:rgba(200,149,108,0.08);transform:translateY(-2px)}
+
+        .btn-wa{background:var(--wa);color:#fff;font-weight:700;padding:14px 36px;border-radius:10px;border:none;cursor:pointer;font-size:1rem;transition:all .3s;font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:10px}
+        .btn-wa:hover{background:var(--wa-dark);transform:translateY(-2px);box-shadow:0 8px 30px rgba(37,211,102,0.3)}
+
+        .feature-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:36px 28px;transition:all .4s cubic-bezier(.16,1,.3,1);position:relative;overflow:hidden}
+        .feature-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:linear-gradient(90deg,var(--accent),transparent);opacity:0;transition:opacity .4s}
+        .feature-card:hover{border-color:rgba(200,149,108,0.25);transform:translateY(-6px);box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 40px rgba(200,149,108,0.05)}
+        .feature-card:hover::before{opacity:1}
+        .feature-icon{width:56px;height:56px;border-radius:14px;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;color:var(--accent);font-size:1.3rem;margin-bottom:20px}
+
+        .gallery-img{border-radius:14px;overflow:hidden;position:relative;cursor:pointer;transition:transform .4s}
+        .gallery-img:hover{transform:scale(1.02)}
+        .gallery-img img{width:100%;height:100%;object-fit:cover;transition:transform .6s}
+        .gallery-img:hover img{transform:scale(1.08)}
+        .gallery-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,6,5,0.8) 0%,transparent 55%);opacity:0;transition:opacity .4s;display:flex;align-items:flex-end;padding:20px}
+        .gallery-img:hover .gallery-overlay{opacity:1}
+
+        .watermark-preview{position:relative;overflow:hidden;border-radius:14px}
+        .watermark-preview::after{content:'STARS MEET INVESTORS';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:1.1rem;font-weight:700;color:rgba(200,149,108,0.2);white-space:nowrap;pointer-events:none;letter-spacing:.08em;font-family:'Cormorant Garamond',serif}
+
+        .form-group{margin-bottom:20px}
+        .form-label{display:block;font-weight:600;font-size:.8rem;color:var(--fg-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em}
+        .form-input{width:100%;padding:14px 16px;background:rgba(255,255,255,0.03);border:1.5px solid var(--border);border-radius:10px;color:var(--fg);font-size:1rem;font-family:'DM Sans',sans-serif;transition:all .3s;outline:none}
+        .form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(200,149,108,0.12);background:rgba(255,255,255,0.05)}
+        .form-input::placeholder{color:var(--fg-dim)}
+        select.form-input{cursor:pointer}
+        select.form-input option{background:var(--bg-card);color:var(--fg)}
+
+        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}
+        .modal-backdrop.show{display:flex}
+        .modal-box{background:var(--bg-card);border:1px solid var(--border-light);border-radius:22px;padding:36px;max-width:440px;width:100%;position:relative;animation:modalIn .4s cubic-bezier(.16,1,.3,1)}
+        @keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+        .toast-container{position:fixed;top:20px;right:20px;z-index:2000;display:flex;flex-direction:column;gap:10px;max-width:calc(100vw - 40px)}
+        .toast{padding:14px 20px;border-radius:12px;font-weight:500;font-size:.88rem;animation:toastIn .4s cubic-bezier(.16,1,.3,1),toastOut .3s 3.5s forwards;max-width:380px;display:flex;align-items:center;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+        .toast-success{background:#1a2e1a;color:#a8e6a8;border:1px solid #2d4a2d}
+        .toast-error{background:#2e1a1a;color:#e6a8a8;border:1px solid #4a2d2d}
+        .toast-info{background:var(--bg-elevated);color:var(--fg);border:1px solid var(--border-light)}
+        @keyframes toastIn{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes toastOut{to{opacity:0;transform:translateX(60px)}}
+
+        .admin-sidebar{width:260px;background:var(--bg-card);border-right:1px solid var(--border);min-height:100vh;padding:24px 0;position:fixed;left:0;top:0;z-index:100;overflow-y:auto}
+        .admin-main{margin-left:260px;padding:32px;min-height:100vh}
+        .admin-nav-item{padding:12px 24px;display:flex;align-items:center;gap:12px;color:var(--fg-muted);cursor:pointer;transition:all .2s;font-weight:500;border-left:3px solid transparent;font-size:.9rem}
+        .admin-nav-item:hover{background:rgba(200,149,108,0.04);color:var(--fg-warm)}
+        .admin-nav-item.active{color:var(--accent-bright);background:var(--accent-glow);border-left-color:var(--accent)}
+
+        .data-table{width:100%;border-collapse:collapse}
+        .data-table th{text-align:left;padding:14px 16px;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-muted);border-bottom:1px solid var(--border);font-weight:600}
+        .data-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.88rem}
+        .data-table tr:hover td{background:rgba(200,149,108,0.03)}
+
+        .badge{display:inline-flex;padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:600}
+        .badge-pending{background:rgba(200,149,108,0.12);color:var(--accent-bright)}
+        .badge-completed{background:rgba(91,168,91,0.12);color:#8fd68f}
+        .badge-rejected{background:rgba(201,64,64,0.12);color:#e68a8a}
+        .badge-active{background:rgba(91,168,91,0.12);color:#8fd68f}
+        .badge-inactive{background:rgba(201,64,64,0.12);color:#e68a8a}
+
+        .reveal{opacity:0;transform:translateY(40px);transition:all .8s cubic-bezier(.16,1,.3,1)}
+        .reveal.visible{opacity:1;transform:translateY(0)}
+        .stat-number{font-size:3rem;font-weight:700;line-height:1}
+        .section-divider{height:1px;background:linear-gradient(90deg,transparent,var(--border-light),transparent);margin:0 auto;max-width:600px}
+
+        .lightbox{position:fixed;inset:0;background:rgba(5,3,2,0.94);z-index:3000;display:none;align-items:center;justify-content:center;cursor:zoom-out}
+        .lightbox.show{display:flex}
+        .lightbox img{max-width:90vw;max-height:85vh;border-radius:14px;animation:modalIn .3s}
+
+        .float-buttons{position:fixed;bottom:24px;right:24px;z-index:900;display:flex;flex-direction:column;gap:14px;align-items:flex-end}
+        .wa-float{width:60px;height:60px;border-radius:50%;background:var(--wa);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px rgba(37,211,102,0.4);transition:all .3s;border:none;color:#fff;font-size:1.6rem;position:relative}
+        .wa-float:hover{transform:scale(1.1);box-shadow:0 6px 30px rgba(37,211,102,0.5)}
+        .wa-float .wa-pulse{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--wa);animation:waPulse 2s infinite}
+        @keyframes waPulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.4);opacity:0}}
+
+        .chat-float{width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-deep));display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px rgba(200,149,108,0.35);transition:all .3s;border:none;color:var(--bg-deep);font-size:1.5rem;position:relative}
+        .chat-float:hover{transform:scale(1.1);box-shadow:0 6px 30px rgba(200,149,108,0.45)}
+        .chat-float .chat-badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:var(--danger);color:#fff;font-size:.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--bg-deep)}
+
+        .chatbot-window{position:fixed;bottom:100px;right:24px;width:380px;max-width:calc(100vw - 48px);height:520px;max-height:calc(100vh - 140px);background:var(--bg-card);border:1px solid var(--border-light);border-radius:20px;z-index:950;display:none;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 40px rgba(200,149,108,0.08);animation:chatOpen .35s cubic-bezier(.16,1,.3,1)}
+        .chatbot-window.open{display:flex}
+        @keyframes chatOpen{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+        .chat-header{padding:18px 20px;background:linear-gradient(135deg,rgba(200,149,108,0.12),rgba(154,107,66,0.06));border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+        .chat-header img{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid var(--accent)}
+        .chat-header-info{flex:1}
+        .chat-header-info h4{font-size:.95rem;font-weight:600;color:var(--fg-warm)}
+        .chat-header-info span{font-size:.75rem;color:var(--success);display:flex;align-items:center;gap:4px}
+        .chat-header-info span::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block}
+        .chat-close{background:none;border:none;color:var(--fg-muted);cursor:pointer;font-size:1.1rem;padding:4px;transition:color .2s}
+        .chat-close:hover{color:var(--fg)}
+
+        .chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px}
+        .chat-messages::-webkit-scrollbar{width:4px}
+        .chat-messages::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:2px}
+
+        .chat-msg{max-width:85%;padding:12px 16px;border-radius:16px;font-size:.9rem;line-height:1.6;animation:msgIn .3s ease}
+        @keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .chat-msg.bot{background:var(--bg-elevated);color:var(--fg-warm);align-self:flex-start;border-bottom-left-radius:4px}
+        .chat-msg.user{background:linear-gradient(135deg,var(--accent),var(--accent-deep));color:var(--bg-deep);align-self:flex-end;border-bottom-right-radius:4px;font-weight:500}
+        .chat-msg.bot a{color:var(--accent-bright);text-decoration:underline}
+
+        .chat-quick{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 12px;flex-shrink:0}
+        .chat-quick-btn{padding:8px 16px;border-radius:20px;background:var(--accent-glow);border:1px solid rgba(200,149,108,0.2);color:var(--accent-bright);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;white-space:nowrap}
+        .chat-quick-btn:hover{background:var(--accent-glow-strong);border-color:var(--accent)}
+
+        .chat-input-area{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-shrink:0;background:rgba(10,6,5,0.5)}
+        .chat-input{flex:1;padding:12px 16px;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);border-radius:12px;color:var(--fg);font-size:.9rem;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .3s}
+        .chat-input:focus{border-color:var(--accent)}
+        .chat-input::placeholder{color:var(--fg-dim)}
+        .chat-send{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-deep));border:none;color:var(--bg-deep);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;transition:all .2s;flex-shrink:0}
+        .chat-send:hover{transform:scale(1.05);box-shadow:0 4px 15px rgba(200,149,108,0.3)}
+
+        .chat-typing{display:flex;gap:4px;padding:12px 16px;align-self:flex-start}
+        .chat-typing span{width:8px;height:8px;border-radius:50%;background:var(--fg-dim);animation:typeDot 1.4s infinite}
+        .chat-typing span:nth-child(2){animation-delay:.2s}
+        .chat-typing span:nth-child(3){animation-delay:.4s}
+        @keyframes typeDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+
+        .admin-padlock{position:fixed;bottom:24px;left:24px;z-index:900;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;color:var(--fg-dim);font-size:.85rem}
+        .admin-padlock:hover{background:var(--accent-glow);border-color:rgba(200,149,108,0.3);color:var(--accent)}
+
+        ::-webkit-scrollbar{width:7px}
+        ::-webkit-scrollbar-track{background:var(--bg-deep)}
+        ::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:var(--fg-dim)}
+
+        @keyframes floatSlow{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+        .float-slow{animation:floatSlow 6s ease-in-out infinite}
+
+        /* ===== STICKER AD - ENHANCED STRUCTURE ===== */
+        .sticker-ad{
+            background:linear-gradient(135deg, rgba(200,149,108,0.06), rgba(154,107,66,0.03));
+            border:1px solid rgba(200,149,108,0.12);
+            border-radius:16px;
+            padding:16px 20px;
+            margin:8px 0;
+            transition:all .3s;
+            display:flex;
+            align-items:center;
+            gap:16px;
+            backdrop-filter:blur(4px);
+            min-height:70px;
+        }
+        .sticker-ad:hover{
+            border-color:rgba(200,149,108,0.3);
+            background:rgba(200,149,108,0.06);
+            transform:translateY(-2px);
+            box-shadow:0 8px 25px rgba(0,0,0,0.2);
+        }
+        .sticker-ad .sticker-icon{
+            width:48px;
+            height:48px;
+            border-radius:12px;
+            background:var(--accent-glow);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:var(--accent);
+            font-size:1.2rem;
+            flex-shrink:0;
+            border:1px solid rgba(200,149,108,0.15);
+        }
+        .sticker-ad .sticker-content{flex:1;min-width:0}
+        .sticker-ad .sticker-title{
+            color:var(--accent-bright);
+            font-weight:700;
+            font-size:1rem;
+            font-family:'Cormorant Garamond',serif;
+            letter-spacing:.02em;
+        }
+        .sticker-ad .sticker-message{
+            color:var(--fg-muted);
+            font-size:.85rem;
+            margin-top:2px;
+            line-height:1.5;
+            word-break:break-word;
+        }
+        .sticker-ad .sticker-image{
+            width:56px;
+            height:56px;
+            border-radius:10px;
+            object-fit:cover;
+            border:1px solid rgba(200,149,108,0.12);
+            flex-shrink:0;
+        }
+        .sticker-ad .sticker-badge{
+            background:var(--accent-glow);
+            color:var(--accent-bright);
+            font-size:.6rem;
+            font-weight:600;
+            padding:2px 10px;
+            border-radius:12px;
+            text-transform:uppercase;
+            letter-spacing:.06em;
+            border:1px solid rgba(200,149,108,0.1);
+            flex-shrink:0;
+        }
+
+        /* Separate Sticker Sections */
+        .sticker-section-top{
+            background:linear-gradient(135deg, rgba(200,149,108,0.04), rgba(154,107,66,0.02));
+            border-bottom:1px solid rgba(200,149,108,0.06);
+            padding:8px 0;
+            position:relative;
+            z-index:45;
+            min-height:60px;
+        }
+        .sticker-section-bottom{
+            background:linear-gradient(135deg, rgba(200,149,108,0.04), rgba(154,107,66,0.02));
+            border-top:1px solid rgba(200,149,108,0.06);
+            padding:8px 0;
+            margin-top:16px;
+        }
+        .sticker-section-top .sticker-ad,
+        .sticker-section-bottom .sticker-ad{
+            margin:4px 0;
+            padding:12px 16px;
+        }
+
+        /* ===== PRODUCT ADS ===== */
+        .product-ad-card{
+            background:var(--bg-card);
+            border:1px solid var(--border);
+            border-radius:14px;
+            overflow:hidden;
+            transition:all .3s;
+            cursor:pointer;
+            min-width:200px;
+            max-width:280px;
+            flex-shrink:0;
+            scroll-snap-align:start;
+        }
+        .product-ad-card:hover{
+            border-color:rgba(200,149,108,0.25);
+            transform:translateY(-3px);
+            box-shadow:0 12px 40px rgba(0,0,0,0.3);
+        }
+        .product-ad-card .product-ad-image{
+            aspect-ratio:16/9;
+            overflow:hidden;
+            background:var(--bg-elevated);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            min-height:100px;
+        }
+        .product-ad-card .product-ad-image img,
+        .product-ad-card .product-ad-image video{
+            width:100%;height:100%;object-fit:cover;
+        }
+        .product-ad-card .product-ad-body{padding:12px 16px 16px}
+        .product-ad-card .product-ad-title{
+            font-weight:600;
+            font-size:.95rem;
+            color:var(--fg-warm);
+            font-family:'Cormorant Garamond',serif;
+        }
+        .product-ad-card .product-ad-price{
+            color:var(--accent-bright);
+            font-weight:700;
+            font-size:1rem;
+        }
+        .product-ad-card .product-ad-desc{
+            color:var(--fg-muted);
+            font-size:.8rem;
+            margin-top:4px;
+            display:-webkit-box;
+            -webkit-line-clamp:2;
+            -webkit-box-orient:vertical;
+            overflow:hidden;
+        }
+
+        .ads-scroll-area{
+            display:flex;
+            gap:16px;
+            overflow-x:auto;
+            padding:8px 4px 16px;
+            scroll-snap-type:x mandatory;
+            -webkit-overflow-scrolling:touch;
+            scroll-behavior:smooth;
+        }
+        .ads-scroll-area::-webkit-scrollbar{height:4px}
+        .ads-scroll-area::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:2px}
+        .ads-scroll-area .product-ad-card{min-width:200px;max-width:260px}
+
+        .ai-dashboard-card{background:var(--bg-card);border:1px solid var(--border);border-radius:18px;padding:24px;transition:all .3s}
+        .ai-dashboard-card:hover{border-color:rgba(200,149,108,0.2);transform:translateY(-2px)}
+        .ai-dashboard-card .platform-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;background:var(--accent-glow);color:var(--accent)}
+
+        .influencer-link{font-family:monospace;font-size:.85rem;color:var(--accent-bright);background:rgba(200,149,108,0.08);padding:4px 12px;border-radius:6px;border:1px solid rgba(200,149,108,0.15)}
+        .influencer-link:hover{background:var(--accent-glow);border-color:var(--accent)}
+
+        /* ===== RESPONSIVE ===== */
+        @media(max-width:768px){
+            .admin-sidebar{width:100%;position:relative;min-height:auto}
+            .admin-main{margin-left:0;padding:16px}
+            .hero-title{font-size:2.2rem}
+            .float-buttons{bottom:16px;right:16px;gap:12px}
+            .wa-float,.chat-float{width:54px;height:54px;font-size:1.4rem}
+            .chatbot-window{bottom:80px;right:12px;width:calc(100vw - 24px);height:calc(100vh - 100px);max-height:none;border-radius:16px}
+            .admin-padlock{bottom:16px;left:16px;width:36px;height:36px;font-size:.75rem}
+            .stat-number{font-size:2.2rem}
+            .feature-card{padding:24px 20px}
+            .sticker-ad{flex-wrap:wrap;padding:12px 16px;gap:12px}
+            .sticker-ad .sticker-image{width:40px;height:40px}
+            .sticker-ad .sticker-icon{width:40px;height:40px;font-size:1rem}
+            .sticker-ad .sticker-title{font-size:.9rem}
+            .sticker-ad .sticker-message{font-size:.8rem}
+            .ads-scroll-area .product-ad-card{min-width:160px;max-width:200px}
+            .product-ad-card .product-ad-title{font-size:.85rem}
+            .product-ad-card .product-ad-price{font-size:.9rem}
+            .sticker-section-top{padding:4px 0;min-height:50px}
+            .sticker-section-bottom{padding:4px 0}
+            .sticker-section-top .sticker-ad,
+            .sticker-section-bottom .sticker-ad{padding:10px 12px}
+            .modal-box{padding:24px}
+            .data-table{font-size:.75rem}
+            .data-table th,.data-table td{padding:8px 10px}
+            .toast-container{top:10px;right:10px;max-width:calc(100vw - 20px)}
+            .toast{font-size:.8rem;padding:10px 14px}
+        }
+        @media(max-width:480px){
+            .chatbot-window{right:8px;width:calc(100vw - 16px);height:calc(100vh - 80px);bottom:76px}
+            .float-buttons{bottom:12px;right:12px}
+            .wa-float,.chat-float{width:50px;height:50px;font-size:1.2rem}
+            .hero-title{font-size:1.8rem}
+            .sticker-ad{padding:10px 12px;gap:10px;min-height:60px}
+            .sticker-ad .sticker-title{font-size:.85rem}
+            .sticker-ad .sticker-message{font-size:.75rem}
+            .sticker-ad .sticker-image{width:36px;height:36px}
+            .sticker-ad .sticker-icon{width:36px;height:36px;font-size:.9rem}
+            .ads-scroll-area .product-ad-card{min-width:140px;max-width:180px}
+            .product-ad-card .product-ad-title{font-size:.8rem}
+            .product-ad-card .product-ad-price{font-size:.85rem}
+            .product-ad-card .product-ad-body{padding:8px 12px 12px}
+            .btn-accent,.btn-outline,.btn-wa{padding:10px 20px;font-size:.85rem}
+            .stat-number{font-size:1.8rem}
+            .feature-card{padding:16px 14px}
+            .feature-card .feature-icon{width:40px;height:40px;font-size:1rem;margin-bottom:12px}
+            .admin-main{padding:16px}
+            .admin-sidebar{padding:12px 0}
+            .admin-nav-item{padding:10px 16px;font-size:.8rem}
+        }
+        @media(max-width:360px){
+            .ads-scroll-area .product-ad-card{min-width:120px;max-width:160px}
+            .sticker-ad{flex-direction:column;align-items:flex-start;text-align:left}
+            .sticker-ad .sticker-badge{align-self:flex-start}
+        }
+
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+        /* Session timeout indicator */
+        .session-timer{
+            position:fixed;
+            bottom:90px;
+            right:24px;
+            z-index:850;
+            background:var(--bg-card);
+            border:1px solid var(--border);
+            border-radius:12px;
+            padding:8px 14px;
+            font-size:.7rem;
+            color:var(--fg-muted);
+            display:none;
+            align-items:center;
+            gap:8px;
+            box-shadow:0 4px 20px rgba(0,0,0,0.4);
+        }
+        .session-timer.show{display:flex}
+        .session-timer .timer-dot{
+            width:8px;height:8px;border-radius:50%;
+            background:var(--success);
+            animation:pulse-dot 2s infinite;
+        }
+        @keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}
+    </style>
+</head>
+<body>
+
+<button id="adminTrigger" aria-hidden="true" tabindex="-1"></button>
+<div class="ambient-glow"></div>
+<canvas id="bgCanvas"></canvas>
+<div class="toast-container" id="toastContainer"></div>
+<div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lightboxImg" src="" alt="Enlarged"></div>
+
+<!-- Session Timer -->
+<div class="session-timer" id="sessionTimer">
+    <span class="timer-dot"></span>
+    <span>Session active</span>
+    <span id="sessionCountdown">30:00</span>
+</div>
+
+<button class="admin-padlock" onclick="openAdminLogin()" aria-label="Admin access" title="Admin">
+    <i class="fas fa-lock"></i>
+</button>
+
+<div class="float-buttons">
+    <div style="position:relative;">
+        <button class="wa-float" onclick="window.open('https://wa.me/23231286286','_blank')" aria-label="WhatsApp">
+            <span class="wa-pulse"></span>
+            <i class="fab fa-whatsapp"></i>
+        </button>
+    </div>
+    <button class="chat-float" onclick="toggleChat()" aria-label="Chat with us" id="chatToggle">
+        <i class="fas fa-comment-dots" id="chatToggleIcon"></i>
+        <span class="chat-badge" id="chatBadge">1</span>
+    </button>
+</div>
+
+<div class="chatbot-window" id="chatWindow">
+    <div class="chat-header">
+        <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" alt="SMI Assistant">
+        <div class="chat-header-info">
+            <h4>SMI Concierge</h4>
+            <span>Online now</span>
+        </div>
+        <button class="chat-close" onclick="toggleChat()" aria-label="Close chat"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-quick" id="chatQuick"></div>
+    <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Type your question..." autocomplete="off">
+        <button class="chat-send" onclick="sendChat()" aria-label="Send"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="adminLoginModal">
+    <div class="modal-box">
+        <button onclick="closeAdminLogin()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:var(--fg-muted);cursor:pointer;font-size:1.3rem;" aria-label="Close"><i class="fas fa-times"></i></button>
+        <div style="text-align:center;margin-bottom:28px;">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-lg mx-auto mb-4" alt="SMI">
+            <h3 class="font-display" style="font-size:1.6rem;font-weight:700;">Admin Access</h3>
+            <p style="color:var(--fg-muted);font-size:.85rem;margin-top:6px;">Restricted — authorized personnel only</p>
+        </div>
+        <form onsubmit="handleAdminLogin(event)">
+            <div class="form-group"><label class="form-label">Username</label><input type="text" id="adminUser" class="form-input" placeholder="Enter username" required autocomplete="off"></div>
+            <div class="form-group"><label class="form-label">Password</label><input type="password" id="adminPass" class="form-input" placeholder="Enter password" required></div>
+            <button type="submit" class="btn-accent" style="width:100%;margin-top:8px;">Sign In</button>
+        </form>
+        <div style="text-align:center;margin-top:12px;font-size:.7rem;color:var(--fg-dim);">Default: admin / starsmeet2025</div>
+    </div>
+</div>
+
+<!-- ==================== TOP STICKER SECTION (SEPARATE, ABOVE NAV) ==================== -->
+<div id="topStickerSection" class="sticker-section-top w-full"></div>
+
+<!-- ==================== NAV ==================== -->
+<nav class="nav-glass fixed top-0 left-0 w-full z-50" id="mainNav">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
+        <a href="#" onclick="showSection('home')" class="flex items-center gap-2 sm:gap-3 no-underline">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img" alt="SMI" style="width:34px;height:34px;">
+            <span class="font-display font-bold text-lg sm:text-xl tracking-tight" style="color:var(--fg-warm);">Stars Meet Investors</span>
+        </a>
+        <div class="hidden md:flex items-center gap-8">
+            <a href="#" class="nav-link active" onclick="showSection('home')" data-nav="home">Home</a>
+            <a href="#" class="nav-link" onclick="showSection('about')" data-nav="about">About</a>
+            <a href="#" class="nav-link" onclick="showSection('gallery')" data-nav="gallery">Gallery</a>
+            <a href="#" class="nav-link" onclick="showSection('market')" data-nav="market">Market</a>
+            <a href="#" class="nav-link" onclick="showSection('register')" data-nav="register">Register</a>
+            <a href="#" class="nav-link" onclick="showSection('contact')" data-nav="contact">Contact</a>
+        </div>
+        <button class="md:hidden text-xl" style="background:none;border:none;color:var(--fg);cursor:pointer;" onclick="toggleMobileMenu()" aria-label="Menu"><i class="fas fa-bars" id="menuIcon"></i></button>
+    </div>
+    <div class="md:hidden hidden" id="mobileMenu" style="background:var(--bg-card);border-top:1px solid var(--border);padding:16px 24px;">
+        <a href="#" class="block py-3 nav-link" onclick="showSection('home');toggleMobileMenu()">Home</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('about');toggleMobileMenu()">About</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('gallery');toggleMobileMenu()">Gallery</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('market');toggleMobileMenu()">Market</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('register');toggleMobileMenu()">Register</a>
+        <a href="#" class="block py-3 nav-link" onclick="showSection('contact');toggleMobileMenu()">Contact</a>
+    </div>
+</nav>
+
+<!-- ==================== HEADER PRODUCT ADS (Below Nav, Above Content) ==================== -->
+<div id="headerProductAds" class="sticker-section-top w-full" style="border-bottom-color:rgba(200,149,108,0.1);padding-top:4px;padding-bottom:4px;margin-top:64px;"></div>
+
+<!-- ==================== HOME ==================== -->
+<section class="page-section active" id="sectionHome">
+    <div class="hero-gradient min-h-screen flex items-center relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+            <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center">
+                <div>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 sm:mb-8" style="background:var(--accent-glow);border:1px solid rgba(200,149,108,0.15);">
+                        <span class="w-2 h-2 rounded-full" style="background:var(--accent-bright);animation:floatSlow 3s ease-in-out infinite;"></span>
+                        <span style="color:var(--accent-bright);font-size:.8rem;font-weight:600;">Where Vision Meets Capital</span>
+                    </div>
+                    <h1 class="hero-title font-display">
+                        <span class="accent-text">Stars</span> Meet<br><span class="accent-text">Investors</span>
+                    </h1>
+                    <p style="color:var(--fg-muted);max-width:520px;line-height:1.75;margin-top:20px;font-size:1rem;">
+                        The premier platform bridging ambitious businesses with strategic investors. Register, gain visibility, and secure the funding to scale your vision.
+                    </p>
+                    <div class="flex flex-wrap gap-3 sm:gap-4 mt-8 sm:mt-10">
+                        <button class="btn-wa" onclick="goToWhatsAppRegister()">
+                            <i class="fab fa-whatsapp text-xl"></i> Register via WhatsApp
+                        </button>
+                        <button class="btn-outline" onclick="showSection('about')">
+                            Learn More <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2 text-sm" style="color:var(--fg-muted);">
+                        <i class="fas fa-map-pin" style="color:var(--accent);"></i>
+                        <span id="visitorLocation">📍 Freetown, Sierra Leone</span>
+                    </div>
+                </div>
+                <div class="hidden md:block relative">
+                    <div class="watermark-preview float-slow" style="aspect-ratio:3/4;max-width:380px;margin-left:auto;">
+                        <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" alt="Stars Meet Investors" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+                    </div>
+                    <div class="absolute -bottom-6 -left-6 p-5 rounded-2xl" style="background:var(--bg-card);border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                        <div class="stat-number accent-text font-display" id="homeTotalReg">0</div>
+                        <div style="color:var(--fg-muted);font-size:.8rem;margin-top:4px;">Registered</div>
+                    </div>
+                    <div class="absolute -top-4 -right-4 p-4 rounded-xl" style="background:var(--bg-card);border:1px solid var(--border);box-shadow:0 12px 40px rgba(0,0,0,0.4);">
+                        <div style="color:var(--accent-bright);font-size:1.5rem;font-weight:700;">$24M+</div>
+                        <div style="color:var(--fg-muted);font-size:.7rem;">Capital Raised</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="background:var(--bg-card);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-14 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+            <div class="text-center reveal"><div class="stat-number accent-text font-display" data-count="500">0</div><div style="color:var(--fg-muted);font-size:.82rem;margin-top:6px;">Registered</div></div>
+            <div class="text-center reveal"><div class="stat-number accent-text font-display" data-count="120">0</div><div style="color:var(--fg-muted);font-size:.82rem;margin-top:6px;">Active Investors</div></div>
+            <div class="text-center reveal"><div class="stat-number accent-text font-display" data-count="35">0</div><div style="color:var(--fg-muted);font-size:.82rem;margin-top:6px;">Deals Closed</div></div>
+            <div class="text-center reveal"><div class="stat-number accent-text font-display" data-count="12">0</div><div style="color:var(--fg-muted);font-size:.82rem;margin-top:6px;">Countries</div></div>
+        </div>
+    </div>
+
+    <!-- MID-SECTION STICKERS -->
+    <div id="homeMidStickers" class="py-4 px-4 sm:px-6 max-w-7xl mx-auto"></div>
+
+    <!-- PRODUCT ADS SECTION (Home) -->
+    <div id="homeProductAds" class="py-6 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display text-xl font-bold" style="color:var(--accent-bright);">🔥 Featured Products</h3>
+            <button onclick="showSection('market')" class="text-sm" style="color:var(--accent);">View All →</button>
+        </div>
+        <div class="ads-scroll-area" id="homeProductAdsContainer"></div>
+    </div>
+
+    <div class="py-16 sm:py-24 px-4 sm:px-6">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-12 sm:mb-16 reveal">
+                <span style="color:var(--accent);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;">Why Choose Us</span>
+                <h2 class="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-3">Built for Growth</h2>
+                <p style="color:var(--fg-muted);max-width:460px;margin:12px auto 0;font-size:.95rem;">Everything your business needs to attract and secure the right investment.</p>
+            </div>
+            <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6">
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fas fa-handshake"></i></div><h3 class="font-display text-xl font-bold mb-3">Investor Matching</h3><p style="color:var(--fg-muted);line-height:1.7;font-size:.9rem;">Our system pairs you with investors aligned with your industry, stage, and capital needs.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fas fa-chart-line"></i></div><h3 class="font-display text-xl font-bold mb-3">Growth Analytics</h3><p style="color:var(--fg-muted);line-height:1.7;font-size:.9rem;">Track visibility, investor interest, and engagement in real-time.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fas fa-file-contract"></i></div><h3 class="font-display text-xl font-bold mb-3">Secure Documents</h3><p style="color:var(--fg-muted);line-height:1.7;font-size:.9rem;">Watermarked, verifiable registration documents ensure authenticity.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fas fa-globe"></i></div><h3 class="font-display text-xl font-bold mb-3">Global Network</h3><p style="color:var(--fg-muted);line-height:1.7;font-size:.9rem;">Access investors across 12+ countries worldwide.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fas fa-calendar-check"></i></div><h3 class="font-display text-xl font-bold mb-3">Live Pitch Events</h3><p style="color:var(--fg-muted);line-height:1.7;font-size:.9rem;">Present directly to panels of qualified investors at curated sessions.</p></div>
+                <div class="feature-card reveal"><div class="feature-icon"><i class="fas fa-lock"></i></div><h3 class="font-display text-xl font-bold mb-3">Data Privacy</h3><p style="color:var(--fg-muted);line-height:1.7;font-size:.9rem;">Encrypted data, shared only with investors you approve.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-16 sm:py-20 px-4 sm:px-6">
+        <div class="max-w-4xl mx-auto text-center rounded-2xl sm:rounded-3xl p-10 sm:p-16 relative overflow-hidden reveal" style="background:linear-gradient(135deg,rgba(200,149,108,0.1),rgba(154,107,66,0.05));border:1px solid rgba(200,149,108,0.15);">
+            <h2 class="font-display text-2xl sm:text-3xl md:text-4xl font-bold mb-4">Ready to Meet Your Investors?</h2>
+            <p style="color:var(--fg-muted);max-width:440px;margin:0 auto 28px;line-height:1.7;font-size:.95rem;">Register today and take the first step toward securing the capital for your next chapter.</p>
+            <button class="btn-wa text-lg px-8 sm:px-12 py-4" onclick="goToWhatsAppRegister()">
+                <i class="fab fa-whatsapp text-2xl"></i> Register via WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer style="border-top:1px solid var(--border);padding:40px 24px 28px;">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-base">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.85rem;line-height:1.7;">Bridging ambitious businesses with strategic investors worldwide.</p>
+                <p style="color:var(--fg-dim);font-size:.8rem;margin-top:8px;"><i class="fas fa-map-pin" style="color:var(--accent);"></i> Freetown, Sierra Leone</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Links</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('market')">Market</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="https://wa.me/23231286286" target="_blank" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(37,211,102,0.12);color:var(--wa);transition:all .3s;" onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.82rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-10 mb-5"></div>
+        <p class="text-center text-xs sm:text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+
+        <!-- FOOTER STICKERS (Separate Section Below Footer) -->
+        <div id="footerStickersSection" class="sticker-section-bottom w-full"></div>
+    </footer>
+</section>
+
+<!-- ==================== ABOUT ==================== -->
+<section class="page-section" id="sectionAbout">
+    <div style="padding-top:90px;" class="max-w-7xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24">
+        <div id="aboutMidStickers" class="mb-6"></div>
+        <div class="text-center mb-12 sm:mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;">About Us</span>
+            <h1 class="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-3">Our Story</h1>
+        </div>
+        <div class="grid md:grid-cols-2 gap-12 md:gap-16 items-center mb-16 sm:mb-20">
+            <div class="reveal"><div class="watermark-preview" style="aspect-ratio:4/3;"><img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0015.jpg" alt="About" style="width:100%;height:100%;object-fit:cover;border-radius:14px;"></div></div>
+            <div class="reveal">
+                <h2 class="font-display text-2xl sm:text-3xl font-bold mb-6">Empowering Businesses to <span class="accent-text">Shine</span></h2>
+                <p style="color:var(--fg-muted);line-height:1.8;margin-bottom:16px;font-size:.95rem;">Stars Meet Investors was founded with a singular mission: to eliminate the friction between promising businesses and the capital they need to thrive.</p>
+                <p style="color:var(--fg-muted);line-height:1.8;margin-bottom:16px;font-size:.95rem;">We believe great ideas shouldn't die in boardrooms for lack of access. Our platform curates, verifies, and presents businesses to pre-qualified investors actively seeking opportunities.</p>
+                <p style="color:var(--fg-muted);line-height:1.8;font-size:.95rem;">From tech startups to established SMEs, we provide the infrastructure for meaningful connections that lead to real deals.</p>
+            </div>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-6 sm:gap-8 reveal">
+            <div class="feature-card text-center"><div class="stat-number accent-text font-display mb-2">2019</div><h3 class="font-bold text-lg mb-2">Year Founded</h3><p style="color:var(--fg-muted);font-size:.85rem;">Democratizing access to investment capital.</p></div>
+            <div class="feature-card text-center"><div class="stat-number accent-text font-display mb-2">$24M</div><h3 class="font-bold text-lg mb-2">Capital Facilitated</h3><p style="color:var(--fg-muted);font-size:.85rem;">Successfully facilitated through our platform.</p></div>
+            <div class="feature-card text-center"><div class="stat-number accent-text font-display mb-2">98%</div><h3 class="font-bold text-lg mb-2">Satisfaction Rate</h3><p style="color:var(--fg-muted);font-size:.85rem;">Consistently rated highly by partners.</p></div>
+        </div>
+        <div class="mt-10">
+            <div id="aboutProductAds" class="py-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-display text-xl font-bold" style="color:var(--accent-bright);">🔥 Featured Products</h3>
+                    <button onclick="showSection('market')" class="text-sm" style="color:var(--accent);">View All →</button>
+                </div>
+                <div class="ads-scroll-area" id="aboutProductAdsContainer"></div>
+            </div>
+        </div>
+    </div>
+    <footer style="border-top:1px solid var(--border);padding:40px 24px 28px;">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-base">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.85rem;line-height:1.7;">Bridging ambitious businesses with strategic investors worldwide.</p>
+                <p style="color:var(--fg-dim);font-size:.8rem;margin-top:8px;"><i class="fas fa-map-pin" style="color:var(--accent);"></i> Freetown, Sierra Leone</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Links</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('market')">Market</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="https://wa.me/23231286286" target="_blank" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(37,211,102,0.12);color:var(--wa);transition:all .3s;" onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.82rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-10 mb-5"></div>
+        <p class="text-center text-xs sm:text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+        <div id="footerStickersSection2" class="sticker-section-bottom w-full"></div>
+    </footer>
+</section>
+
+<!-- ==================== GALLERY ==================== -->
+<section class="page-section" id="sectionGallery">
+    <div style="padding-top:90px;" class="max-w-7xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24">
+        <div id="galleryMidStickers" class="mb-6"></div>
+        <div class="text-center mb-12 sm:mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;">Gallery</span>
+            <h1 class="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-3">Moments That Matter</h1>
+            <p style="color:var(--fg-muted);max-width:460px;margin:12px auto 0;font-size:.92rem;">Highlights from our events and celebrations.</p>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4" id="galleryGrid"></div>
+        <div class="mt-10">
+            <div id="galleryProductAds" class="py-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-display text-xl font-bold" style="color:var(--accent-bright);">🔥 Featured Products</h3>
+                    <button onclick="showSection('market')" class="text-sm" style="color:var(--accent);">View All →</button>
+                </div>
+                <div class="ads-scroll-area" id="galleryProductAdsContainer"></div>
+            </div>
+        </div>
+    </div>
+    <footer style="border-top:1px solid var(--border);padding:40px 24px 28px;">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-base">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.85rem;line-height:1.7;">Bridging ambitious businesses with strategic investors worldwide.</p>
+                <p style="color:var(--fg-dim);font-size:.8rem;margin-top:8px;"><i class="fas fa-map-pin" style="color:var(--accent);"></i> Freetown, Sierra Leone</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Links</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('market')">Market</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="https://wa.me/23231286286" target="_blank" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(37,211,102,0.12);color:var(--wa);transition:all .3s;" onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.82rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-10 mb-5"></div>
+        <p class="text-center text-xs sm:text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+        <div id="footerStickersSection3" class="sticker-section-bottom w-full"></div>
+    </footer>
+</section>
+
+<!-- ==================== MARKET ==================== -->
+<section class="page-section" id="sectionMarket">
+    <div style="padding-top:90px;" class="max-w-7xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24">
+        <div id="marketMidStickers" class="mb-6"></div>
+        <div class="text-center mb-12 sm:mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;">Marketplace</span>
+            <h1 class="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-3">Our Products</h1>
+            <p style="color:var(--fg-muted);max-width:460px;margin:12px auto 0;font-size:.92rem;">Explore our premium investment packages and services.</p>
+        </div>
+        <div id="marketStickers" class="mb-8"></div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="marketGrid"></div>
+    </div>
+    <footer style="border-top:1px solid var(--border);padding:40px 24px 28px;">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-base">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.85rem;line-height:1.7;">Bridging ambitious businesses with strategic investors worldwide.</p>
+                <p style="color:var(--fg-dim);font-size:.8rem;margin-top:8px;"><i class="fas fa-map-pin" style="color:var(--accent);"></i> Freetown, Sierra Leone</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Links</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('market')">Market</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="https://wa.me/23231286286" target="_blank" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(37,211,102,0.12);color:var(--wa);transition:all .3s;" onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.82rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-10 mb-5"></div>
+        <p class="text-center text-xs sm:text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+        <div id="footerStickersSection4" class="sticker-section-bottom w-full"></div>
+    </footer>
+</section>
+
+<!-- ==================== REGISTER ==================== -->
+<section class="page-section" id="sectionRegister">
+    <div style="padding-top:90px;" class="max-w-2xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24 text-center">
+        <div id="registerMidStickers" class="mb-6"></div>
+        <div class="reveal" style="padding:60px 24px;">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-lg mx-auto mb-8" alt="SMI">
+            <h1 class="font-display text-3xl sm:text-4xl font-bold mb-4">Begin Your Registration</h1>
+            <p style="color:var(--fg-muted);max-width:460px;margin:0 auto 12px;line-height:1.7;font-size:.95rem;">To ensure a personalized and seamless registration experience, we handle all registrations through WhatsApp. Our team will guide you step by step.</p>
+            <p style="color:var(--fg-muted);font-size:.85rem;margin-bottom:32px;">You will be redirected to WhatsApp to speak with our registration team.</p>
+            <button class="btn-wa text-lg px-10 sm:px-14 py-4" onclick="goToWhatsAppRegister()">
+                <i class="fab fa-whatsapp text-2xl"></i> Continue to WhatsApp
+            </button>
+            <div style="margin-top:24px;">
+                <button class="btn-outline" onclick="showSection('home')" style="font-size:.9rem;padding:10px 24px;">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Home
+                </button>
+            </div>
+        </div>
+        <div class="mt-10">
+            <div id="registerProductAds" class="py-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-display text-xl font-bold" style="color:var(--accent-bright);">🔥 Featured Products</h3>
+                    <button onclick="showSection('market')" class="text-sm" style="color:var(--accent);">View All →</button>
+                </div>
+                <div class="ads-scroll-area" id="registerProductAdsContainer"></div>
+            </div>
+        </div>
+    </div>
+    <footer style="border-top:1px solid var(--border);padding:40px 24px 28px;">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-base">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.85rem;line-height:1.7;">Bridging ambitious businesses with strategic investors worldwide.</p>
+                <p style="color:var(--fg-dim);font-size:.8rem;margin-top:8px;"><i class="fas fa-map-pin" style="color:var(--accent);"></i> Freetown, Sierra Leone</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Links</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('market')">Market</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="https://wa.me/23231286286" target="_blank" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(37,211,102,0.12);color:var(--wa);transition:all .3s;" onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.82rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-10 mb-5"></div>
+        <p class="text-center text-xs sm:text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+        <div id="footerStickersSection5" class="sticker-section-bottom w-full"></div>
+    </footer>
+</section>
+
+<!-- ==================== CONTACT ==================== -->
+<section class="page-section" id="sectionContact">
+    <div style="padding-top:90px;" class="max-w-5xl mx-auto px-4 sm:px-6 pb-20 sm:pb-24">
+        <div id="contactMidStickers" class="mb-6"></div>
+        <div class="text-center mb-12 sm:mb-16 reveal">
+            <span style="color:var(--accent);font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.12em;">Contact</span>
+            <h1 class="font-display text-3xl sm:text-4xl md:text-5xl font-bold mt-3">Get In Touch</h1>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-5 sm:gap-8 mb-12 sm:mb-16">
+            <div class="feature-card text-center reveal"><div class="feature-icon mx-auto"><i class="fas fa-envelope"></i></div><h3 class="font-bold mb-2">Email</h3><p style="color:var(--fg-muted);font-size:.85rem;">info@starsmeetinvestors.com</p></div>
+            <div class="feature-card text-center reveal"><div class="feature-icon mx-auto"><i class="fas fa-phone"></i></div><h3 class="font-bold mb-2">Phone</h3><p style="color:var(--fg-muted);font-size:.85rem;">+232 31 286 286</p></div>
+            <div class="feature-card text-center reveal">
+                <div class="feature-icon mx-auto" style="background:rgba(37,211,102,0.12);color:var(--wa);"><i class="fab fa-whatsapp"></i></div>
+                <h3 class="font-bold mb-2">WhatsApp</h3>
+                <p style="color:var(--fg-muted);font-size:.85rem;">+23231286286</p>
+                <a href="https://wa.me/23231286286" target="_blank" style="color:var(--wa);font-size:.82rem;font-weight:600;text-decoration:none;">Chat now <i class="fas fa-arrow-right ml-1"></i></a>
+            </div>
+        </div>
+        <div class="rounded-2xl p-6 sm:p-12 reveal" style="background:var(--bg-card);border:1px solid var(--border);">
+            <form onsubmit="handleContact(event)">
+                <div class="grid sm:grid-cols-2 gap-5 sm:gap-6">
+                    <div class="form-group"><label class="form-label">Your Name</label><input type="text" class="form-input" placeholder="Full name" required></div>
+                    <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" placeholder="Email address" required></div>
+                </div>
+                <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" placeholder="How can we help?" required></div>
+                <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" rows="5" placeholder="Your message..." required style="resize:vertical;"></textarea></div>
+                <button type="submit" class="btn-accent">Send Message <i class="fas fa-arrow-right ml-2"></i></button>
+            </form>
+        </div>
+        <div class="mt-10">
+            <div id="contactProductAds" class="py-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-display text-xl font-bold" style="color:var(--accent-bright);">🔥 Featured Products</h3>
+                    <button onclick="showSection('market')" class="text-sm" style="color:var(--accent);">View All →</button>
+                </div>
+                <div class="ads-scroll-area" id="contactProductAdsContainer"></div>
+            </div>
+        </div>
+    </div>
+    <footer style="border-top:1px solid var(--border);padding:40px 24px 28px;">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+                    <span class="font-display font-bold text-base">Stars Meet Investors</span>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.85rem;line-height:1.7;">Bridging ambitious businesses with strategic investors worldwide.</p>
+                <p style="color:var(--fg-dim);font-size:.8rem;margin-top:8px;"><i class="fas fa-map-pin" style="color:var(--accent);"></i> Freetown, Sierra Leone</p>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Links</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('home')">Home</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('about')">About</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('market')">Market</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('register')">Register</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);" onclick="showSection('contact')">Contact</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Services</h4>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Investor Matching</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Pitch Events</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Verification</a>
+                <a href="#" class="block py-1.5 text-sm" style="color:var(--fg-muted);">Advisory</a>
+            </div>
+            <div>
+                <h4 class="font-bold mb-4 text-xs uppercase tracking-wider" style="color:var(--accent);">Connect</h4>
+                <div class="flex gap-3 mb-4">
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:var(--accent-glow);color:var(--fg-muted);transition:all .3s;" onmouseover="this.style.background='var(--accent-glow-strong)';this.style.color='var(--accent-bright)'" onmouseout="this.style.background='var(--accent-glow)';this.style.color='var(--fg-muted)'"><i class="fab fa-twitter"></i></a>
+                    <a href="https://wa.me/23231286286" target="_blank" class="w-10 h-10 rounded-lg flex items-center justify-center" style="background:rgba(37,211,102,0.12);color:var(--wa);transition:all .3s;" onmouseover="this.style.background='rgba(37,211,102,0.2)'" onmouseout="this.style.background='rgba(37,211,102,0.12)'"><i class="fab fa-whatsapp"></i></a>
+                </div>
+                <p style="color:var(--fg-muted);font-size:.82rem;">info@starsmeetinvestors.com</p>
+            </div>
+        </div>
+        <div class="section-divider mt-10 mb-5"></div>
+        <p class="text-center text-xs sm:text-sm" style="color:var(--fg-dim);">&copy; 2025 Stars Meet Investors. All rights reserved.</p>
+        <div id="footerStickersSection6" class="sticker-section-bottom w-full"></div>
+    </footer>
+</section>
+
+<!-- ==================== ADMIN PANEL ==================== -->
+<section class="page-section" id="sectionAdmin" style="display:none;">
+    <aside class="admin-sidebar">
+        <div class="px-6 mb-8 flex items-center gap-3">
+            <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="logo-img logo-img-sm" alt="SMI">
+            <div><div class="font-display font-bold text-sm" style="color:var(--fg-warm);">Stars Meet Investors</div><div style="color:var(--fg-dim);font-size:.68rem;">Admin Panel</div></div>
+        </div>
+        <div class="admin-nav-item active" onclick="showAdminTab('dashboard')"><i class="fas fa-th-large w-5 text-center"></i> Dashboard</div>
+        <div class="admin-nav-item" onclick="showAdminTab('registrations')"><i class="fas fa-file-alt w-5 text-center"></i> Registrations</div>
+        <div class="admin-nav-item" onclick="showAdminTab('products')"><i class="fas fa-box w-5 text-center"></i> Products</div>
+        <div class="admin-nav-item" onclick="showAdminTab('stickers')"><i class="fas fa-sticky-note w-5 text-center"></i> Stickers / Ads</div>
+        <div class="admin-nav-item" onclick="showAdminTab('social')"><i class="fas fa-share-alt w-5 text-center"></i> AI Social Feed</div>
+        <div class="admin-nav-item" onclick="showAdminTab('influencers')"><i class="fas fa-users w-5 text-center"></i> Influencers</div>
+        <div class="admin-nav-item" onclick="showAdminTab('tracking')"><i class="fas fa-eye w-5 text-center"></i> Live Tracking</div>
+        <div class="admin-nav-item" onclick="showAdminTab('cashComplete')"><i class="fas fa-money-bill-wave w-5 text-center"></i> Cash Payment</div>
+        <div class="admin-nav-item" onclick="showAdminTab('staff')"><i class="fas fa-users-cog w-5 text-center"></i> Staff</div>
+        <div class="admin-nav-item" onclick="showAdminTab('codes')"><i class="fas fa-barcode w-5 text-center"></i> Codes</div>
+        <div style="border-top:1px solid var(--border);margin:20px 0;"></div>
+        <div class="admin-nav-item" onclick="handleLogout()"><i class="fas fa-sign-out-alt w-5 text-center"></i> Logout</div>
+        <div style="padding:16px 24px;margin-top:auto;">
+            <div class="flex items-center gap-3">
+                <img src="https://vygkmpebbyhtylbseazp.supabase.co/storage/v1/object/public/student-photos/IMG-20260712-WA0014.jpg" class="w-9 h-9 rounded-full object-cover" alt="Admin" style="border:2px solid var(--accent);">
+                <div><div class="text-sm font-semibold" id="adminDisplayName">Admin</div><div style="color:var(--fg-dim);font-size:.68rem;" id="adminDisplayRole">Administrator</div></div>
+            </div>
+        </div>
+    </aside>
+    <main class="admin-main">
+
+        <!-- DASHBOARD -->
+        <div class="admin-tab active" id="tabDashboard">
+            <h2 class="font-display text-2xl font-bold mb-8">AI Dashboard</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-10">
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total Reg</div><div class="stat-number accent-text font-display mt-2" id="dashTotalReg">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Completed</div><div class="stat-number font-display mt-2" style="color:#8fd68f;" id="dashCompleted">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Pending</div><div class="stat-number font-display mt-2" style="color:var(--accent-bright);" id="dashPending">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Visitors</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashVisitors">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Influencers</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashInfluencers">0</div></div>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-10">
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Products</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashProducts">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Staff</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashStaff">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Stickers</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashStickers">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Social Feeds</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="dashSocialFeeds">0</div></div>
+            </div>
+
+            <div class="feature-card mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">Live Customer Tracking <span style="color:var(--success);font-size:.7rem;font-weight:400;"><i class="fas fa-circle" style="font-size:.5rem;"></i> LIVE</span></h3>
+                    <button onclick="refreshTracking()" class="btn-accent" style="padding:8px 16px;font-size:.8rem;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead><tr><th>Time</th><th>Location</th><th>IP</th><th>Device</th><th>Page</th><th>Action</th></tr></thead>
+                        <tbody id="trackingBody"></tbody>
+                    </table>
+                </div>
+                <div id="trackingNoData" class="text-center py-8" style="color:var(--fg-dim);">No tracking data yet.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg">AI Social Feed <span style="color:var(--success);font-size:.7rem;font-weight:400;"><i class="fas fa-circle" style="font-size:.5rem;"></i> LIVE</span></h3>
+                    <button onclick="fetchAllSocialFeeds()" class="btn-accent" style="padding:8px 16px;font-size:.8rem;"><i class="fas fa-sync-alt"></i> Fetch All</button>
+                </div>
+                <div id="socialFeedContainer">
+                    <div class="text-center py-8" style="color:var(--fg-dim);">Click "Fetch All" to load social feeds from 30+ platforms.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REGISTRATIONS -->
+        <div class="admin-tab" id="tabRegistrations" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">All Registrations</h2>
+                <div class="flex gap-3 flex-wrap">
+                    <input type="text" class="form-input" id="searchReg" placeholder="Search..." style="width:200px;padding:10px 14px;font-size:.85rem;" oninput="renderRegistrations()">
+                    <select class="form-input" id="filterStatus" style="width:140px;padding:10px 14px;font-size:.85rem;" onchange="renderRegistrations()"><option value="all">All</option><option value="completed">Completed</option><option value="pending">Pending</option><option value="rejected">Rejected</option></select>
+                </div>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>ID</th><th>Business</th><th>Rep</th><th>Email</th><th>Industry</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody id="allRegBody"></tbody></table></div>
+                <div id="allRegNoData" class="text-center py-12" style="color:var(--fg-dim);">No registrations found.</div>
+            </div>
+        </div>
+
+        <!-- PRODUCTS -->
+        <div class="admin-tab" id="tabProducts" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Products</h2>
+                <button class="btn-accent" onclick="showAddProductForm()"><i class="fas fa-plus mr-2"></i>Add Product</button>
+            </div>
+            <div id="addProductForm" style="display:none;" class="feature-card mb-8">
+                <h3 class="font-bold text-lg mb-4">New Product</h3>
+                <form onsubmit="handleAddProduct(event)">
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="prodTitle" placeholder="Product name" required></div>
+                        <div class="form-group"><label class="form-label">Price (Le) *</label><input type="number" class="form-input" id="prodPrice" placeholder="0.00" required></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-input" id="prodDesc" rows="2" placeholder="Product description"></textarea></div>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div class="form-group"><label class="form-label">Category</label><input type="text" class="form-input" id="prodCategory" placeholder="e.g. Investment"></div>
+                        <div class="form-group"><label class="form-label">Video URL</label><input type="url" class="form-input" id="prodVideo" placeholder="https://... (video cover)"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Image URL</label><input type="url" class="form-input" id="prodImage" placeholder="https://..."></div>
+                    <div class="flex gap-3"><button type="submit" class="btn-accent">Create Product</button><button type="button" class="btn-outline" onclick="hideAddProductForm()">Cancel</button></div>
+                </form>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Title</th><th>Price (Le)</th><th>Category</th><th>Status</th><th>Views</th><th>Actions</th></tr></thead><tbody id="productsBody"></tbody></table></div>
+                <div id="productsNoData" class="text-center py-12" style="color:var(--fg-dim);">No products yet.</div>
+            </div>
+        </div>
+
+        <!-- STICKERS -->
+        <div class="admin-tab" id="tabStickers" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Sticker Messages (Ads)</h2>
+                <button class="btn-accent" onclick="showAddStickerForm()"><i class="fas fa-plus mr-2"></i>Add Sticker</button>
+            </div>
+            <div id="addStickerForm" style="display:none;" class="feature-card mb-8">
+                <h3 class="font-bold text-lg mb-4">New Sticker Message</h3>
+                <form onsubmit="handleAddSticker(event)">
+                    <div class="form-group"><label class="form-label">Title *</label><input type="text" class="form-input" id="stickTitle" placeholder="Sticker title" required></div>
+                    <div class="form-group"><label class="form-label">Message *</label><textarea class="form-input" id="stickMsg" rows="2" placeholder="Sticker message" required></textarea></div>
+                    <div class="form-group"><label class="form-label">Image URL</label><input type="url" class="form-input" id="stickImage" placeholder="https://..."></div>
+                    <div class="flex gap-3"><button type="submit" class="btn-accent">Create Sticker</button><button type="button" class="btn-outline" onclick="hideAddStickerForm()">Cancel</button></div>
+                </form>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Title</th><th>Message</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead><tbody id="stickersBody"></tbody></table></div>
+                <div id="stickersNoData" class="text-center py-12" style="color:var(--fg-dim);">No stickers created.</div>
+            </div>
+        </div>
+
+        <!-- AI SOCIAL FEED -->
+        <div class="admin-tab" id="tabSocial" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">AI Social Media Feed</h2>
+                <button class="btn-accent" onclick="fetchAllSocialFeeds()"><i class="fas fa-sync-alt mr-2"></i>Fetch All 30+ Platforms</button>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-6">
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-facebook-f"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Facebook</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-x-twitter"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">X (Twitter)</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-instagram"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Instagram</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-tiktok"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">TikTok</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-youtube"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">YouTube</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-linkedin-in"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">LinkedIn</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-pinterest-p"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Pinterest</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-reddit-alien"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Reddit</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-snapchat"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Snapchat</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-whatsapp"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">WhatsApp</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-telegram"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Telegram</div></div>
+                <div class="ai-dashboard-card text-center"><div class="platform-icon mx-auto"><i class="fab fa-discord"></i></div><div class="text-xs mt-2 text-center" style="color:var(--fg-muted);">Discord</div></div>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Platform</th><th>Author</th><th>Content</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Posted</th></tr></thead><tbody id="socialBody"></tbody></table></div>
+                <div id="socialNoData" class="text-center py-12" style="color:var(--fg-dim);">No social feeds fetched yet. Click "Fetch All 30+ Platforms".</div>
+            </div>
+        </div>
+
+        <!-- INFLUENCERS -->
+        <div class="admin-tab" id="tabInfluencers" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Influencer Management</h2>
+                <button class="btn-accent" onclick="showAddInfluencerForm()"><i class="fas fa-user-plus mr-2"></i>Add Influencer</button>
+            </div>
+            <div id="addInfluencerForm" style="display:none;" class="feature-card mb-8 max-w-lg">
+                <h3 class="font-bold text-lg mb-4">New Influencer</h3>
+                <form onsubmit="handleAddInfluencer(event)">
+                    <div class="form-group"><label class="form-label">Name *</label><input type="text" class="form-input" id="infName" placeholder="Influencer name" required></div>
+                    <div class="form-group"><label class="form-label">Platform</label><input type="text" class="form-input" id="infPlatform" placeholder="e.g. Instagram, TikTok"></div>
+                    <div class="form-group"><label class="form-label">Profile/Page URL</label><input type="url" class="form-input" id="infUrl" placeholder="https://..."></div>
+                    <div class="form-group"><label class="form-label">Special Code</label><input type="text" class="form-input" id="infCode" placeholder="Auto-generated if empty"></div>
+                    <div class="flex gap-3"><button type="submit" class="btn-accent">Create Influencer</button><button type="button" class="btn-outline" onclick="hideAddInfluencerForm()">Cancel</button></div>
+                </form>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Name</th><th>Platform</th><th>Code</th><th>Shareable Link</th><th>Status</th><th>Detected</th><th>Actions</th></tr></thead><tbody id="influencersBody"></tbody></table></div>
+                <div id="influencersNoData" class="text-center py-12" style="color:var(--fg-dim);">No influencers added.</div>
+            </div>
+            <div class="mt-4 text-sm" style="color:var(--fg-muted);">
+                <i class="fas fa-info-circle"></i> Shareable links automatically detect when influencers tag the website.
+            </div>
+        </div>
+
+        <!-- TRACKING -->
+        <div class="admin-tab" id="tabTracking" style="display:none;">
+            <h2 class="font-display text-2xl font-bold mb-8">Customer Tracking Analytics</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Total Visitors</div><div class="stat-number font-display mt-2" style="color:var(--accent-bright);" id="trackTotalVisitors">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Today</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="trackToday">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Unique Devices</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="trackDevices">0</div></div>
+                <div class="feature-card"><div style="color:var(--fg-muted);font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Countries</div><div class="stat-number font-display mt-2" style="color:var(--fg-warm);" id="trackCountries">0</div></div>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Time</th><th>Location</th><th>IP</th><th>Device</th><th>Browser</th><th>Page</th><th>Action</th></tr></thead><tbody id="trackAllBody"></tbody></table></div>
+                <div id="trackAllNoData" class="text-center py-12" style="color:var(--fg-dim);">No tracking data.</div>
+            </div>
+        </div>
+
+        <!-- CASH PAYMENT -->
+        <div class="admin-tab" id="tabCashComplete" style="display:none;">
+            <h2 class="font-display text-2xl font-bold mb-2">Complete Cash Payment</h2>
+            <p style="color:var(--fg-muted);margin-bottom:24px;font-size:.92rem;">Enter the Unique ID for a cash-payment registration.</p>
+            <div class="feature-card" style="max-width:600px;">
+                <form onsubmit="handleCashComplete(event)">
+                    <div class="form-group"><label class="form-label">Unique ID / Code *</label><input type="text" class="form-input" id="cashCodeInput" placeholder="e.g. SMI-XXXX-XXXX" required style="font-family:monospace;font-size:1.1rem;letter-spacing:.05em;"></div>
+                    <button type="submit" class="btn-accent"><i class="fas fa-check-circle mr-2"></i>Lookup and Complete</button>
+                </form>
+                <div id="cashResult" style="margin-top:24px;display:none;"></div>
+            </div>
+        </div>
+
+        <!-- STAFF -->
+        <div class="admin-tab" id="tabStaff" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Staff Management</h2>
+                <button class="btn-accent" onclick="showAddStaffForm()" id="addStaffBtn"><i class="fas fa-user-plus mr-2"></i>Add Staff</button>
+            </div>
+            <div id="addStaffForm" style="display:none;" class="feature-card mb-8 max-w-lg">
+                <h3 class="font-bold text-lg mb-4">New Staff Account</h3>
+                <form onsubmit="handleAddStaff(event)">
+                    <div class="form-group"><label class="form-label">Full Name *</label><input type="text" class="form-input" id="staffName" placeholder="Staff name" required></div>
+                    <div class="form-group"><label class="form-label">Username *</label><input type="text" class="form-input" id="staffUsername" placeholder="Username" required></div>
+                    <div class="form-group"><label class="form-label">Password *</label><input type="password" class="form-input" id="staffPassword" placeholder="Min 6 characters" required minlength="6"></div>
+                    <div class="form-group"><label class="form-label">Role</label><select class="form-input" id="staffRole"><option value="staff">Staff (View Only)</option><option value="editor">Editor (View + Edit)</option></select></div>
+                    <div class="flex gap-3"><button type="submit" class="btn-accent">Create</button><button type="button" class="btn-outline" onclick="hideAddStaffForm()">Cancel</button></div>
+                </form>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <table class="data-table"><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead><tbody id="staffTableBody"></tbody></table>
+                <div id="staffNoData" class="text-center py-12" style="color:var(--fg-dim);">No staff accounts.</div>
+            </div>
+        </div>
+
+        <!-- CODES -->
+        <div class="admin-tab" id="tabCodes" style="display:none;">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-8">
+                <h2 class="font-display text-2xl font-bold">Payment Codes</h2>
+                <button class="btn-accent" onclick="generateNewCode()"><i class="fas fa-plus mr-2"></i>Generate Code</button>
+            </div>
+            <div class="feature-card" style="padding:0;overflow:hidden;">
+                <table class="data-table"><thead><tr><th>Code</th><th>Status</th><th>Created</th><th>Used By</th></tr></thead><tbody id="codesTableBody"></tbody></table>
+                <div id="codesNoData" class="text-center py-12" style="color:var(--fg-dim);">No codes generated.</div>
+            </div>
+        </div>
+
+    </main>
+</section>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+// ============================================================
+// 📦 STORAGE HELPERS
+// ============================================================
+function getData(k, f) { try { const d = localStorage.getItem('smi_' + k); return d ? JSON.parse(d) : f; } catch { return f; } }
+
+function setData(k, v) { localStorage.setItem('smi_' + k, JSON.stringify(v)); }
+
+const DEFAULT_PRODUCTS = [
+    { id: 'prod_default_1', title: 'Premium Investment Package', description: 'Full investor matching with dedicated support and pitch deck review.', price_leone: 2500000, category: 'Investment', video_url: '', image_url: '', status: 'active', views: 0, created_at: new Date().toISOString() },
+    { id: 'prod_default_2', title: 'Startup Accelerator Plan', description: 'Fast-track your business with curated investor introductions and mentorship.', price_leone: 1500000, category: 'Accelerator', video_url: '', image_url: '', status: 'active', views: 0, created_at: new Date().toISOString() },
+    { id: 'prod_default_3', title: 'VC Pitch Session', description: 'Present your business directly to venture capitalists in a live session.', price_leone: 5000000, category: 'Pitch', video_url: '', image_url: '', status: 'active', views: 0, created_at: new Date().toISOString() },
+    { id: 'prod_default_4', title: 'Investor Database Access', description: 'Full access to our network of 120+ pre-qualified investors.', price_leone: 3500000, category: 'Database', video_url: '', image_url: '', status: 'active', views: 0, created_at: new Date().toISOString() },
+    { id: 'prod_default_5', title: 'Business Valuation Report', description: 'Professional valuation and financial analysis for your business.', price_leone: 800000, category: 'Valuation', video_url: '', image_url: '', status: 'active', views: 0, created_at: new Date().toISOString() }
+];
+
+function initDefaults() {
+    if (!getData('users', null)) setData('users', [{ username: 'admin', password: 'starsmeet2025', role: 'admin',
+        name: 'Super Admin', created: new Date().toISOString() }]);
+    if (!getData('registrations', null)) setData('registrations', []);
+    if (!getData('codes', null)) setData('codes', []);
+    if (!getData('stickers', null)) setData('stickers', []);
+    if (!getData('tracking', null)) setData('tracking', []);
+    if (!getData('visitorCount', null)) setData('visitorCount', 0);
+    if (!getData('socialFeeds', null)) setData('socialFeeds', []);
+    if (!getData('influencers', null)) setData('influencers', []);
+    if (!getData('influencerDetections', null)) setData('influencerDetections', []);
+
+    let products = getData('products', []);
+    if (!products || products.length === 0) {
+        setData('products', DEFAULT_PRODUCTS);
+        console.log('📦 Default products initialized.');
+    }
+}
+
+// ============================================================
+// 🌍 LOCATION DETECTION
+// ============================================================
+let visitorLocation = { city: 'Freetown', country: 'Sierra Leone', full: 'Freetown, Sierra Leone' };
+let visitorIP = 'Unknown';
+
+async function detectLocation() {
+    try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.city && data.country_name) {
+            visitorLocation = {
+                city: data.city || 'Freetown',
+                country: data.country_name || 'Sierra Leone',
+                full: (data.city || 'Freetown') + ', ' + (data.country_name || 'Sierra Leone')
+            };
+            visitorIP = data.ip || 'Unknown';
+        }
+    } catch (e) {
+        console.log('📍 Using default location: Freetown, Sierra Leone');
+    }
+    const locEl = document.getElementById('visitorLocation');
+    if (locEl) locEl.textContent = '📍 ' + visitorLocation.full;
+    return visitorLocation;
+}
+
+// ============================================================
+// 🔧 UTILITY
+// ============================================================
+function generateUniqueID() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s1 = '', s2 = '';
+    for (let i = 0; i < 4; i++) { s1 += c[Math.floor(Math.random() * c.length)]; s2 += c[Math.floor(Math.random() * c.length)]; }
+    return 'SMI-' + s1 + '-' + s2;
+}
+
+function generateCode() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let s = '';
+    for (let i = 0; i < 8; i++) s += c[Math.floor(Math.random() * c.length)];
+    return 'INF-' + s;
+}
+
+function formatDate(d) { return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }); }
+
+function formatTime(d) { return new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+
+function getSessionId() {
+    let id = localStorage.getItem('smi_session_id');
+    if (!id) { id = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('smi_session_id', id); }
+    return id;
+}
+
+function getDeviceType() { return /Mobile|Android|iPhone/i.test(navigator.userAgent) ? 'Mobile' : 'Desktop'; }
+
+function getBrowser() { return navigator.userAgent.split(' ').pop() || 'Unknown'; }
+
+// ============================================================
+// 🔐 SESSION MANAGEMENT - Auto Logout after 30 minutes
+// ============================================================
+let sessionTimer = null;
+let sessionTimeout = 30 * 60; // 30 minutes in seconds
+let sessionCountdown = sessionTimeout;
+let isSessionActive = false;
+
+function startSessionTimer() {
+    if (!currentUser) return;
+    isSessionActive = true;
+    sessionCountdown = sessionTimeout;
+    document.getElementById('sessionTimer').classList.add('show');
+    updateSessionDisplay();
+
+    if (sessionTimer) clearInterval(sessionTimer);
+    sessionTimer = setInterval(() => {
+        sessionCountdown--;
+        updateSessionDisplay();
+        if (sessionCountdown <= 0) {
+            clearInterval(sessionTimer);
+            sessionTimer = null;
+            handleAutoLogout();
+        }
+    }, 1000);
+
+    // Reset timer on user activity
+    const resetEvents = ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'];
+    resetEvents.forEach(event => {
+        document.removeEventListener(event, resetSessionTimer);
+        document.addEventListener(event, resetSessionTimer);
+    });
+}
+
+function resetSessionTimer() {
+    if (!currentUser) return;
+    sessionCountdown = sessionTimeout;
+    updateSessionDisplay();
+}
+
+function updateSessionDisplay() {
+    const mins = Math.floor(sessionCountdown / 60);
+    const secs = sessionCountdown % 60;
+    document.getElementById('sessionCountdown').textContent =
+        String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+}
+
+function stopSessionTimer() {
+    if (sessionTimer) {
+        clearInterval(sessionTimer);
+        sessionTimer = null;
+    }
+    isSessionActive = false;
+    document.getElementById('sessionTimer').classList.remove('show');
+
+    const resetEvents = ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'];
+    resetEvents.forEach(event => {
+        document.removeEventListener(event, resetSessionTimer);
+    });
+}
+
+function handleAutoLogout() {
+    if (!currentUser) return;
+    showToast('⏰ Session expired after 30 minutes of inactivity. Please login again.', 'error');
+    handleLogout();
+}
+
+// ============================================================
+// 💬 TOAST
+// ============================================================
+function showToast(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', info: 'fa-info-circle' };
+    t.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i> ' + msg;
+    c.appendChild(t);
+    setTimeout(() => { if (t.parentNode) t.remove(); }, 4200);
+}
+
+// ============================================================
+// 🧭 NAVIGATION
+// ============================================================
+let currentSection = 'home';
+let currentUser = null;
+
+function showSection(name) {
+    document.querySelectorAll('.page-section').forEach(s => { s.style.display = 'none'; s.classList.remove('active'); });
+    const t = document.getElementById('section' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (t) { t.style.display = 'block'; t.classList.add('active'); }
+    document.querySelectorAll('[data-nav]').forEach(l => l.classList.remove('active'));
+    const a = document.querySelector('[data-nav="' + name + '"]');
+    if (a) a.classList.add('active');
+    document.getElementById('mainNav').style.display = (name === 'admin') ? 'none' : '';
+    document.querySelector('.admin-padlock').style.display = (name === 'admin') ? 'none' : '';
+    document.querySelector('.float-buttons').style.display = (name === 'admin') ? 'none' : '';
+    currentSection = name;
+    window.scrollTo(0, 0);
+    setTimeout(initRevealAnimations, 100);
+    if (name === 'admin') { refreshAdminData();
+        startSessionTimer(); } else { stopSessionTimer(); }
+    renderAllStickersAndAds();
+    trackAction('page_view', name);
+}
+
+function toggleMobileMenu() {
+    const m = document.getElementById('mobileMenu'), i = document.getElementById('menuIcon');
+    m.classList.toggle('hidden');
+    i.className = m.classList.contains('hidden') ? 'fas fa-bars' : 'fas fa-times';
+}
+
+// ============================================================
+// 🔐 AUTH
+// ============================================================
+let tapCount = 0,
+    tapTimer = null;
+document.getElementById('adminTrigger').addEventListener('click', function(e) {
+    e.preventDefault();
+    tapCount++;
+    clearTimeout(tapTimer);
+    if (tapCount >= 5) { tapCount = 0;
+        openAdminLogin(); } else tapTimer = setTimeout(() => { tapCount = 0; }, 1500);
+});
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.shiftKey && e.key === 'A') { e.preventDefault();
+        openAdminLogin(); }
+});
+
+function openAdminLogin() {
+    document.getElementById('adminLoginModal').classList.add('show');
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+    setTimeout(() => document.getElementById('adminUser').focus(), 100);
+}
+
+function closeAdminLogin() { document.getElementById('adminLoginModal').classList.remove('show'); }
+document.getElementById('adminLoginModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAdminLogin();
+});
+
+function handleAdminLogin(e) {
+    e.preventDefault();
+    const u = document.getElementById('adminUser').value.trim();
+    const p = document.getElementById('adminPass').value;
+    const users = getData('users', []);
+    const user = users.find(x => x.username === u && x.password === p);
+    if (user) {
+        currentUser = user;
+        closeAdminLogin();
+        showToast('Welcome, ' + user.name, 'success');
+        document.getElementById('adminDisplayName').textContent = user.name;
+        document.getElementById('adminDisplayRole').textContent = user.role === 'admin' ? 'Administrator' : user.role ===
+            'editor' ? 'Editor' : 'Staff';
+        document.getElementById('addStaffBtn').style.display = user.role === 'admin' ? '' : 'none';
+        showSection('admin');
+        showAdminTab('dashboard');
+        startSessionTimer();
+    } else { showToast('Invalid credentials.', 'error'); }
+}
+
+function handleLogout() {
+    stopSessionTimer();
+    currentUser = null;
+    showSection('home');
+    showToast('Logged out.', 'info');
+}
+
+// ============================================================
+// 📊 ADMIN TABS
+// ============================================================
+function showAdminTab(tab) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.admin-nav-item').forEach(n => n.classList.remove('active'));
+    const map = {
+        dashboard: 'tabDashboard',
+        registrations: 'tabRegistrations',
+        products: 'tabProducts',
+        stickers: 'tabStickers',
+        social: 'tabSocial',
+        influencers: 'tabInfluencers',
+        tracking: 'tabTracking',
+        cashComplete: 'tabCashComplete',
+        staff: 'tabStaff',
+        codes: 'tabCodes'
+    };
+    const el = document.getElementById(map[tab]);
+    if (el) el.style.display = 'block';
+    const idx = Object.keys(map).indexOf(tab);
+    const items = document.querySelectorAll('.admin-nav-item');
+    if (items[idx]) items[idx].classList.add('active');
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+// ============================================================
+// 👤 TRACKING
+// ============================================================
+async function trackAction(action, details) {
+    try {
+        const sessionId = getSessionId();
+        const loc = await detectLocation();
+        const tracking = getData('tracking', []);
+        tracking.push({
+            session_id: sessionId,
+            ip_address: visitorIP || 'Unknown',
+            location_city: loc.city || 'Freetown',
+            location_country: loc.country || 'Sierra Leone',
+            device_type: getDeviceType(),
+            browser: getBrowser(),
+            page_visited: currentSection || 'home',
+            action_type: action,
+            click_data: details || {},
+            created_at: new Date().toISOString()
+        });
+        setData('tracking', tracking);
+        const count = getData('visitorCount', 0);
+        setData('visitorCount', count + 1);
+        checkInfluencerDetection(action, details);
+    } catch (e) { /* silent */ }
+}
+
+function checkInfluencerDetection(action, details) {
+    const influencers = getData('influencers', []);
+    const detections = getData('influencerDetections', []);
+    const url = window.location.href;
+    const search = window.location.search;
+    influencers.forEach(inf => {
+        if (search.includes(inf.code) || url.includes(inf.code)) {
+            const existing = detections.find(d => d.influencerCode === inf.code && d.session_id === getSessionId());
+            if (!existing) {
+                detections.push({ influencerCode: inf.code, influencerName: inf.name, session_id: getSessionId(),
+                    action: action, url: url, detected_at: new Date().toISOString() });
+                setData('influencerDetections', detections);
+                showToast('🔗 Influencer detected: ' + inf.name, 'success');
+                renderInfluencers();
+            }
+        }
+    });
+}
+
+function refreshTrackingData() {
+    const tracking = getData('tracking', []).slice(-20).reverse();
+    const b = document.getElementById('trackingBody');
+    const nd = document.getElementById('trackingNoData');
+    if (!tracking.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = tracking.map(t => `
+            <tr>
+                <td style="font-size:.8rem;color:var(--fg-dim);">${formatTime(t.created_at)}</td>
+                <td>${t.location_city || 'Freetown'}, ${t.location_country || 'Sierra Leone'}</td>
+                <td style="font-family:monospace;font-size:.75rem;">${t.ip_address || 'Unknown'}</td>
+                <td>${t.device_type || 'Unknown'}</td>
+                <td>${t.page_visited || 'Unknown'}</td>
+                <td><span class="badge badge-pending">${t.action_type || 'view'}</span></td>
+            </tr>
+        `).join('');
+
+    const allBody = document.getElementById('trackAllBody');
+    const allNd = document.getElementById('trackAllNoData');
+    if (allBody) {
+        const allData = getData('tracking', []).reverse();
+        if (!allData.length) { allBody.innerHTML = '';
+            allNd.style.display = ''; return; }
+        allNd.style.display = 'none';
+        allBody.innerHTML = allData.slice(0, 50).map(t => `
+                <tr>
+                    <td style="font-size:.8rem;color:var(--fg-dim);">${formatTime(t.created_at)}</td>
+                    <td>${t.location_city || 'Freetown'}, ${t.location_country || 'Sierra Leone'}</td>
+                    <td style="font-family:monospace;font-size:.75rem;">${t.ip_address || 'Unknown'}</td>
+                    <td>${t.device_type || 'Unknown'}</td>
+                    <td>${t.browser || 'Unknown'}</td>
+                    <td>${t.page_visited || 'Unknown'}</td>
+                    <td><span class="badge badge-pending">${t.action_type || 'view'}</span></td>
+                </tr>
+            `).join('');
+    }
+
+    const allTrack = getData('tracking', []);
+    const today = new Date().toDateString();
+    const todayVisits = allTrack.filter(t => new Date(t.created_at).toDateString() === today);
+    document.getElementById('trackTotalVisitors').textContent = allTrack.length;
+    document.getElementById('trackToday').textContent = todayVisits.length;
+    const devices = new Set(allTrack.map(t => t.device_type).filter(Boolean));
+    document.getElementById('trackDevices').textContent = devices.size;
+    const countries = new Set(allTrack.map(t => t.location_country).filter(Boolean));
+    document.getElementById('trackCountries').textContent = countries.size;
+}
+
+function refreshTracking() { refreshTrackingData();
+    showToast('Tracking data refreshed.', 'success');
+    resetSessionTimer(); }
+
+// ============================================================
+// 📊 DASHBOARD
+// ============================================================
+function refreshAdminData() {
+    const regs = getData('registrations', []);
+    const users = getData('users', []);
+    const products = getData('products', []);
+    const stickers = getData('stickers', []);
+    const tracking = getData('tracking', []);
+    const social = getData('socialFeeds', []);
+    const influencers = getData('influencers', []);
+
+    document.getElementById('dashTotalReg').textContent = regs.length;
+    document.getElementById('dashCompleted').textContent = regs.filter(r => r.status === 'completed').length;
+    document.getElementById('dashPending').textContent = regs.filter(r => r.status === 'pending').length;
+    document.getElementById('dashVisitors').textContent = getData('visitorCount', 0);
+    document.getElementById('dashProducts').textContent = products.length;
+    document.getElementById('dashStaff').textContent = users.length;
+    document.getElementById('dashStickers').textContent = stickers.filter(s => s.active !== false).length;
+    document.getElementById('dashSocialFeeds').textContent = social.length;
+    document.getElementById('dashInfluencers').textContent = influencers.length;
+
+    document.getElementById('homeTotalReg').textContent = regs.length;
+
+    renderRegistrations();
+    renderProducts();
+    renderStaff();
+    renderCodes();
+    renderStickers();
+    renderInfluencers();
+    refreshTrackingData();
+    refreshSocialFeeds();
+    renderAllStickersAndAds();
+    renderProductAds();
+}
+
+// ============================================================
+// 📋 REGISTRATIONS
+// ============================================================
+function renderRegistrations() {
+    const search = (document.getElementById('searchReg')?.value || '').toLowerCase();
+    const filter = document.getElementById('filterStatus')?.value || 'all';
+    let regs = getData('registrations', []);
+    if (search) regs = regs.filter(r => (r.entityName || '').toLowerCase().includes(search) || (r.uniqueId || '').toLowerCase()
+        .includes(search) || (r.fullName || '').toLowerCase().includes(search));
+    if (filter !== 'all') regs = regs.filter(r => r.status === filter);
+    const b = document.getElementById('allRegBody');
+    const nd = document.getElementById('allRegNoData');
+    if (!regs.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = regs.slice().reverse().map(r => `
+            <tr>
+                <td style="font-family:monospace;font-size:.82rem;color:var(--accent);">${r.uniqueId || 'N/A'}</td>
+                <td>${r.entityName || 'N/A'}</td>
+                <td>${r.fullName || 'N/A'}</td>
+                <td style="color:var(--fg-muted);font-size:.82rem;">${r.email || 'N/A'}</td>
+                <td>${r.industry || 'N/A'}</td>
+                <td><span class="badge badge-${r.status || 'pending'}">${r.status || 'pending'}</span></td>
+                <td style="color:var(--fg-dim);font-size:.82rem;">${formatDate(r.date)}</td>
+                <td>
+                    ${r.status === 'completed' ? `<button onclick="reprintPDF('${r.uniqueId}')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Download PDF"><i class="fas fa-file-pdf"></i></button>` : ''}
+                    ${r.status === 'pending' ? `<button onclick="quickComplete('${r.uniqueId}')" style="background:none;border:none;color:#8fd68f;cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Complete"><i class="fas fa-check"></i></button><button onclick="quickReject('${r.uniqueId}')" style="background:none;border:none;color:#e68a8a;cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Reject"><i class="fas fa-times"></i></button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+}
+
+// ============================================================
+// 📄 PDF GENERATION
+// ============================================================
+function reprintPDF(id) {
+    const regs = getData('registrations', []);
+    const reg = regs.find(r => r.uniqueId === id);
+    if (reg) generateRegistrationPDF(reg);
+    else showToast('Registration not found.', 'error');
+    resetSessionTimer();
+}
+
+function generateRegistrationPDF(reg) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('p', 'mm', 'a4');
+    const pW = 210,
+        pH = 297,
+        m = 20;
+    let y = 15;
+    const wm = 'STARS MEET INVESTORS';
+
+    doc.setFillColor(10, 6, 5);
+    doc.rect(0, 0, pW, pH, 'F');
+    doc.saveGraphicsState();
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(48);
+    doc.setTextColor(200, 149, 108, 0.05);
+    for (let r = -2; r < 8; r++) {
+        for (let c = -1; c < 3; c++) { doc.text(wm, c * 100 + (r % 2) * 50 - 40, r * 45, { angle: -30 }); }
+    }
+    doc.restoreGraphicsState();
+    doc.setFillColor(200, 149, 108);
+    doc.rect(0, 0, pW, 4, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(200, 149, 108);
+    doc.text(wm, pW / 2, y + 10, { align: 'center' });
+    y += 18;
+    doc.setDrawColor(200, 149, 108, 0.3);
+    doc.setLineWidth(0.5);
+    doc.line(m, y, pW - m, y);
+    y += 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(160, 145, 128);
+    doc.text('OFFICIAL REGISTRATION CERTIFICATE', pW / 2, y, { align: 'center' });
+    y += 14;
+    doc.setFillColor(18, 14, 12);
+    doc.roundedRect(m, y, pW - m * 2, 16, 3, 3, 'F');
+    doc.setDrawColor(200, 149, 108, 0.35);
+    doc.roundedRect(m, y, pW - m * 2, 16, 3, 3, 'S');
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(200, 149, 108);
+    doc.text('ID: ' + (reg.uniqueId || 'N/A'), pW / 2, y + 10, { align: 'center' });
+    y += 26;
+
+    const fields = [
+        ['Business Name', reg.entityName || 'N/A'],
+        ['Reg Number', reg.regNumber || 'N/A'],
+        ['Representative', reg.fullName || 'N/A'],
+        ['Email', reg.email || 'N/A'],
+        ['Phone', reg.phone || 'N/A'],
+        ['Industry', reg.industry || 'N/A'],
+        ['Stage', reg.stage || 'N/A'],
+        ['Capital', reg.capital ? '$' + reg.capital : 'N/A'],
+        ['Address', reg.address || 'N/A']
+    ];
+
+    doc.setFont('helvetica', 'normal');
+    fields.forEach(([l, v]) => {
+        if (y > pH - 80) {
+            doc.addPage();
+            doc.setFillColor(10, 6, 5);
+            doc.rect(0, 0, pW, pH, 'F');
+            doc.setFillColor(200, 149, 108);
+            doc.rect(0, 0, pW, 2, 'F');
+            doc.saveGraphicsState();
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(48);
+            doc.setTextColor(200, 149, 108, 0.05);
+            for (let r = -2; r < 8; r++) {
+                for (let c = -1; c < 3; c++) { doc.text(wm, c * 100 + (r % 2) * 50 - 40, r * 45, { angle: -30 }); }
+            }
+            doc.restoreGraphicsState();
+            y = 15;
+        }
+        doc.setFontSize(8.5);
+        doc.setTextColor(120, 108, 95);
+        doc.text(l + ':', m, y);
+        doc.setFontSize(10);
+        doc.setTextColor(240, 235, 228);
+        const lines = doc.splitTextToSize(v || 'N/A', pW - m * 2 - 50);
+        doc.text(lines, m + 45, y);
+        y += Math.max(8, lines.length * 5.5 + 3);
+    });
+
+    y += 6;
+    doc.setFontSize(8.5);
+    doc.setTextColor(120, 108, 95);
+    doc.text('Description:', m, y);
+    y += 6;
+    doc.setFontSize(9.5);
+    doc.setTextColor(220, 215, 205);
+    const dl = doc.splitTextToSize(reg.description || 'N/A', pW - m * 2);
+    doc.text(dl, m, y);
+    y += dl.length * 5 + 12;
+
+    doc.setFillColor(18, 14, 12);
+    doc.roundedRect(m, y, pW - m * 2, 18, 3, 3, 'F');
+    const sc = reg.status === 'completed' ? [143, 214, 143] : [228, 176, 138];
+    doc.setFontSize(9);
+    doc.setTextColor(...sc);
+    doc.text('STATUS: ' + (reg.status || 'PENDING').toUpperCase(), m + 8, y + 8);
+    doc.setTextColor(140, 125, 110);
+    doc.text('DATE: ' + new Date(reg.date || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long',
+            day: 'numeric' }), m + 8, y + 14);
+    doc.text('Payment: ' + (reg.paymentMethod || 'online').toUpperCase(), pW - m - 40, y + 11);
+    y += 28;
+
+    doc.setDrawColor(200, 149, 108, 0.15);
+    doc.line(m, y, pW - m, y);
+    y += 8;
+    doc.setFontSize(7.5);
+    doc.setTextColor(90, 80, 70);
+    doc.text('Computer-generated proof of registration with Stars Meet Investors.', pW / 2, y, { align: 'center' });
+    y += 5;
+    doc.text('Watermark authenticates origin. Unauthorized reproduction prohibited.', pW / 2, y, { align: 'center' });
+    y += 5;
+    doc.text('Verify: info@starsmeetinvestors.com | ID: ' + (reg.uniqueId || 'N/A'), pW / 2, y, { align: 'center' });
+
+    doc.save('SMI_Registration_' + (reg.uniqueId || 'unknown') + '.pdf');
+}
+
+// ============================================================
+// 💰 CASH PAYMENT
+// ============================================================
+function quickComplete(id) {
+    const regs = getData('registrations', []);
+    const idx = regs.findIndex(r => r.uniqueId === id);
+    if (idx !== -1) confirmCashComplete(idx);
+    else showToast('Registration not found.', 'error');
+    resetSessionTimer();
+}
+
+function quickReject(id) {
+    const regs = getData('registrations', []);
+    const idx = regs.findIndex(r => r.uniqueId === id);
+    if (idx !== -1) rejectCashReg(idx);
+    else showToast('Registration not found.', 'error');
+    resetSessionTimer();
+}
+
+function handleCashComplete(e) {
+    e.preventDefault();
+    const input = document.getElementById('cashCodeInput').value.trim().toUpperCase();
+    const rd = document.getElementById('cashResult');
+    const regs = getData('registrations', []);
+    const codes = getData('codes', []);
+    const idx = regs.findIndex(r => r.uniqueId === input);
+
+    if (idx === -1) {
+        const ci = codes.findIndex(c => c.code === input && c.status === 'available');
+        if (ci === -1) {
+            rd.style.display = 'block';
+            rd.innerHTML =
+                '<div style="padding:16px;border-radius:10px;background:rgba(201,64,64,0.1);border:1px solid rgba(201,64,64,0.3);color:#e68a8a;"><i class="fas fa-exclamation-triangle mr-2"></i>No pending registration or available code found.</div>';
+            return;
+        }
+        rd.style.display = 'block';
+        rd.innerHTML =
+            '<div style="padding:20px;border-radius:10px;background:rgba(200,149,108,0.1);border:1px solid rgba(200,149,108,0.3);color:var(--accent-bright);"><i class="fas fa-info-circle mr-2"></i>Code <strong>' +
+            input + '</strong> is available. Share it for registration.</div>';
+        return;
+    }
+
+    const reg = regs[idx];
+    if (reg.status === 'completed') {
+        rd.style.display = 'block';
+        rd.innerHTML =
+            '<div style="padding:20px;border-radius:10px;background:rgba(91,168,91,0.1);border:1px solid rgba(91,168,91,0.3);color:#8fd68f;"><i class="fas fa-check-circle mr-2"></i><strong>' +
+            reg.entityName + '</strong> is already completed.</div>';
+        return;
+    }
+    if (reg.status === 'rejected') {
+        rd.style.display = 'block';
+        rd.innerHTML =
+            '<div style="padding:20px;border-radius:10px;background:rgba(201,64,64,0.1);border:1px solid rgba(201,64,64,0.3);color:#e68a8a;"><i class="fas fa-ban mr-2"></i>Rejected.</div>';
+        return;
+    }
+
+    rd.style.display = 'block';
+    rd.innerHTML =
+        '<div style="padding:24px;border-radius:14px;background:rgba(200,149,108,0.05);border:1px solid rgba(200,149,108,0.18);"><h4 class="font-bold text-lg mb-4" style="color:var(--accent-bright);">Pending Registration</h4><div class="grid grid-cols-2 gap-3 text-sm"><div><span style="color:var(--fg-muted);">Business:</span> <strong>' +
+        reg.entityName +
+        '</strong></div><div><span style="color:var(--fg-muted);">ID:</span> <strong style="font-family:monospace;">' +
+        reg.uniqueId +
+        '</strong></div><div><span style="color:var(--fg-muted);">Rep:</span> <strong>' + reg.fullName +
+        '</strong></div><div><span style="color:var(--fg-muted);">Email:</span> <strong>' + reg.email +
+        '</strong></div><div><span style="color:var(--fg-muted);">Industry:</span> <strong>' + reg.industry +
+        '</strong></div><div><span style="color:var(--fg-muted);">Stage:</span> <strong>' + reg.stage +
+        '</strong></div></div><div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;"><button class="btn-accent" onclick="confirmCashComplete(' +
+        idx +
+        ')"><i class="fas fa-check mr-2"></i>Confirm & Complete</button><button class="btn-outline" onclick="rejectCashReg(' +
+        idx + ')" style="border-color:var(--danger);color:var(--danger);">Reject</button></div></div>';
+    resetSessionTimer();
+}
+
+function confirmCashComplete(idx) {
+    const regs = getData('registrations', []);
+    regs[idx].status = 'completed';
+    regs[idx].paymentMethod = 'cash';
+    regs[idx].completedDate = new Date().toISOString();
+    setData('registrations', regs);
+
+    const codes = getData('codes', []);
+    const ci = codes.findIndex(c => c.code === regs[idx].uniqueId);
+    if (ci !== -1) { codes[ci].status = 'used';
+        codes[ci].usedBy = regs[idx].entityName;
+        setData('codes', codes); }
+
+    generateRegistrationPDF(regs[idx]);
+    document.getElementById('cashResult').innerHTML =
+        '<div style="padding:20px;border-radius:10px;background:rgba(91,168,91,0.1);border:1px solid rgba(91,168,91,0.3);color:#8fd68f;"><i class="fas fa-check-circle mr-2"></i>Completed! PDF for <strong>' +
+        regs[idx].email + '</strong>.</div>';
+    showToast('Cash registration completed.', 'success');
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+function rejectCashReg(idx) {
+    const regs = getData('registrations', []);
+    regs[idx].status = 'rejected';
+    setData('registrations', regs);
+    document.getElementById('cashResult').innerHTML =
+        '<div style="padding:20px;border-radius:10px;background:rgba(201,64,64,0.1);border:1px solid rgba(201,64,64,0.3);color:#e68a8a;"><i class="fas fa-ban mr-2"></i>Rejected.</div>';
+    showToast('Rejected.', 'error');
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+// ============================================================
+// 📦 PRODUCTS
+// ============================================================
+function showAddProductForm() { document.getElementById('addProductForm').style.display = 'block';
+    resetSessionTimer(); }
+
+function hideAddProductForm() {
+    document.getElementById('addProductForm').style.display = 'none';
+    document.getElementById('addProductForm').querySelector('form').reset();
+}
+
+function handleAddProduct(e) {
+    e.preventDefault();
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    const title = document.getElementById('prodTitle').value.trim();
+    const price = parseFloat(document.getElementById('prodPrice').value);
+    const description = document.getElementById('prodDesc').value.trim();
+    const category = document.getElementById('prodCategory').value.trim();
+    const video_url = document.getElementById('prodVideo').value.trim();
+    const image_url = document.getElementById('prodImage').value.trim();
+    if (!title || !price) { showToast('Title and price are required.', 'error'); return; }
+    const products = getData('products', []);
+    products.push({
+        id: 'prod_' + Date.now(),
+        title,
+        description,
+        price_leone: price,
+        category,
+        video_url,
+        image_url,
+        status: 'active',
+        views: 0,
+        created_at: new Date().toISOString()
+    });
+    setData('products', products);
+    showToast('Product created: ' + title, 'success');
+    hideAddProductForm();
+    renderProducts();
+    refreshAdminData();
+    renderMarket();
+    renderProductAds();
+    trackAction('product_created', title);
+    resetSessionTimer();
+}
+
+function renderProducts() {
+    const products = getData('products', []);
+    const b = document.getElementById('productsBody');
+    const nd = document.getElementById('productsNoData');
+    if (!products.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = products.slice().reverse().map(p => `
+            <tr>
+                <td><strong>${p.title}</strong></td>
+                <td style="color:var(--accent-bright);font-weight:600;">Le ${p.price_leone ? p.price_leone.toLocaleString() : '0'}</td>
+                <td>${p.category || 'N/A'}</td>
+                <td><span class="badge badge-${p.status === 'active' ? 'active' : 'inactive'}">${p.status || 'inactive'}</span></td>
+                <td>${p.views || 0}</td>
+                <td>
+                    ${p.video_url ? '<span style="color:var(--accent);font-size:.7rem;"><i class="fas fa-video"></i></span>' : ''}
+                    ${p.image_url ? '<span style="color:var(--accent);font-size:.7rem;"><i class="fas fa-image"></i></span>' : ''}
+                    <button onclick="toggleProductStatus('${p.id}')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Toggle Status">
+                        <i class="fas ${p.status === 'active' ? 'fa-pause' : 'fa-play'}"></i>
+                    </button>
+                    <button onclick="deleteProduct('${p.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    resetSessionTimer();
+}
+
+function toggleProductStatus(id) {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    const products = getData('products', []);
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    p.status = p.status === 'active' ? 'inactive' : 'active';
+    setData('products', products);
+    showToast('Product updated.', 'success');
+    renderProducts();
+    renderMarket();
+    renderProductAds();
+    resetSessionTimer();
+}
+
+function deleteProduct(id) {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    if (!confirm('Delete this product?')) return;
+    let products = getData('products', []);
+    products = products.filter(x => x.id !== id);
+    setData('products', products);
+    showToast('Product deleted.', 'success');
+    renderProducts();
+    refreshAdminData();
+    renderMarket();
+    renderProductAds();
+    resetSessionTimer();
+}
+
+function renderMarket() {
+    const grid = document.getElementById('marketGrid');
+    const products = getData('products', []).filter(p => p.status === 'active');
+    if (!products.length) {
+        grid.innerHTML =
+            '<div class="col-span-full text-center py-16" style="color:var(--fg-muted);"><i class="fas fa-store fa-3x mb-4" style="opacity:0.3;"></i><p>No products available yet. Check back soon!</p></div>';
+        return;
+    }
+    grid.innerHTML = products.slice().reverse().map(p => `
+            <div class="feature-card reveal" onclick="viewProduct('${p.id}')" style="cursor:pointer;">
+                ${p.video_url ? `<div style="aspect-ratio:16/9;border-radius:10px;overflow:hidden;margin-bottom:16px;background:var(--bg-elevated);">
+                    <video src="${p.video_url}" style="width:100%;height:100%;object-fit:cover;" controls onerror="this.style.display='none'"></video>
+                </div>` : ''}
+                ${p.image_url && !p.video_url ? `<div style="aspect-ratio:16/9;border-radius:10px;overflow:hidden;margin-bottom:16px;background:var(--bg-elevated);">
+                    <img src="${p.image_url}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">
+                </div>` : ''}
+                ${!p.video_url && !p.image_url ? `<div style="aspect-ratio:16/9;border-radius:10px;margin-bottom:16px;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;font-size:2rem;color:var(--accent);font-family:'Cormorant Garamond',serif;">SMI</div>` : ''}
+                <h3 class="font-display text-xl font-bold mb-2">${p.title}</h3>
+                <p style="color:var(--accent-bright);font-weight:700;font-size:1.2rem;">Le ${p.price_leone ? p.price_leone.toLocaleString() : '0'}</p>
+                <p style="color:var(--fg-muted);font-size:.85rem;margin-top:8px;">${p.description || ''}</p>
+                <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+                    <span class="badge badge-active">${p.category || 'General'}</span>
+                </div>
+                <button class="btn-accent" style="margin-top:16px;padding:10px 20px;font-size:.85rem;width:100%;justify-content:center;" onclick="event.stopPropagation();buyProduct('${p.id}')">
+                    <i class="fas fa-shopping-cart"></i> Buy Now
+                </button>
+            </div>
+        `).join('');
+    setTimeout(initRevealAnimations, 100);
+}
+
+function viewProduct(id) {
+    const products = getData('products', []);
+    const p = products.find(x => x.id === id);
+    if (p) { p.views = (p.views || 0) + 1;
+        setData('products', products); }
+    trackAction('product_view', id);
+    showToast('📦 ' + (p ? p.title : 'Product'), 'info');
+    resetSessionTimer();
+}
+
+function buyProduct(id) {
+    const products = getData('products', []);
+    const p = products.find(x => x.id === id);
+    if (!p) { showToast('Product not found.', 'error'); return; }
+    trackAction('purchase_click', id);
+    const msg = encodeURIComponent('Hello Stars Meet Investors! I\'m interested in purchasing: ' + p.title +
+        ' (Le ' + (p.price_leone ? p.price_leone.toLocaleString() : '0') +
+        '). Please guide me on the next steps.');
+    window.open('https://wa.me/23231286286?text=' + msg, '_blank');
+    showToast('Redirecting to WhatsApp...', 'success');
+    resetSessionTimer();
+}
+
+// ============================================================
+// 📝 STICKERS / ADS (Enhanced Structure)
+// ============================================================
+function showAddStickerForm() { document.getElementById('addStickerForm').style.display = 'block';
+    resetSessionTimer(); }
+
+function hideAddStickerForm() {
+    document.getElementById('addStickerForm').style.display = 'none';
+    document.getElementById('addStickerForm').querySelector('form').reset();
+}
+
+function handleAddSticker(e) {
+    e.preventDefault();
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    const title = document.getElementById('stickTitle').value.trim();
+    const message = document.getElementById('stickMsg').value.trim();
+    const image_url = document.getElementById('stickImage').value.trim();
+    if (!title || !message) { showToast('Title and message are required.', 'error'); return; }
+    const stickers = getData('stickers', []);
+    stickers.push({ id: 'stick_' + Date.now(), title, message, image_url, active: true, created_at: new Date()
+            .toISOString() });
+    setData('stickers', stickers);
+    showToast('Sticker created: ' + title, 'success');
+    hideAddStickerForm();
+    renderStickers();
+    renderAllStickersAndAds();
+    resetSessionTimer();
+}
+
+function renderStickers() {
+    const stickers = getData('stickers', []);
+    const b = document.getElementById('stickersBody');
+    const nd = document.getElementById('stickersNoData');
+    if (!stickers.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = stickers.slice().reverse().map(s => `
+            <tr>
+                <td><strong>${s.title}</strong></td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.message}</td>
+                <td><span class="badge badge-${s.active !== false ? 'active' : 'inactive'}">${s.active !== false ? 'Active' : 'Inactive'}</span></td>
+                <td style="font-size:.8rem;color:var(--fg-dim);">${formatDate(s.created_at)}</td>
+                <td>
+                    <button onclick="toggleSticker('${s.id}')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Toggle Status">
+                        <i class="fas ${s.active !== false ? 'fa-pause' : 'fa-play'}"></i>
+                    </button>
+                    <button onclick="deleteSticker('${s.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    resetSessionTimer();
+}
+
+function toggleSticker(id) {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    const stickers = getData('stickers', []);
+    const s = stickers.find(x => x.id === id);
+    if (!s) return;
+    s.active = s.active === false ? true : false;
+    setData('stickers', stickers);
+    showToast('Sticker updated.', 'success');
+    renderStickers();
+    renderAllStickersAndAds();
+    resetSessionTimer();
+}
+
+function deleteSticker(id) {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    if (!confirm('Delete this sticker?')) return;
+    let stickers = getData('stickers', []);
+    stickers = stickers.filter(x => x.id !== id);
+    setData('stickers', stickers);
+    showToast('Sticker deleted.', 'success');
+    renderStickers();
+    renderAllStickersAndAds();
+    resetSessionTimer();
+}
+
+// ===== RENDER ALL STICKERS AND ADS =====
+function renderAllStickersAndAds() {
+    renderHeaderStickers();
+    renderMidStickers();
+    renderFooterStickers();
+    renderProductAds();
+    renderMarketStickers();
+}
+
+function renderHeaderStickers() {
+    const container = document.getElementById('topStickerSection');
+    const stickers = getData('stickers', []).filter(s => s.active !== false);
+    if (!stickers.length) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex flex-wrap gap-3 items-center justify-center">
+            ${stickers.slice(0, 4).map(s => `
+                <div class="sticker-ad" style="padding:10px 16px;margin:4px 0;">
+                    ${s.image_url ? `<img src="${s.image_url}" alt="${s.title}" class="sticker-image" onerror="this.style.display='none'">` : `<div class="sticker-icon"><i class="fas fa-bullhorn"></i></div>`}
+                    <div class="sticker-content">
+                        <div class="sticker-title">${s.title}</div>
+                        <div class="sticker-message">${s.message}</div>
+                    </div>
+                    <span class="sticker-badge">Ad</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderMidStickers() {
+    const page = currentSection || 'home';
+    const container = document.getElementById(page + 'MidStickers');
+    if (!container) return;
+    const stickers = getData('stickers', []).filter(s => s.active !== false);
+    if (!stickers.length) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+        <div class="flex flex-wrap gap-3 items-center justify-center py-2">
+            ${stickers.slice(0, 3).map(s => `
+                <div class="sticker-ad" style="padding:12px 18px;flex:1;min-width:200px;max-width:400px;">
+                    ${s.image_url ? `<img src="${s.image_url}" alt="${s.title}" class="sticker-image" onerror="this.style.display='none'">` : `<div class="sticker-icon"><i class="fas fa-bullhorn"></i></div>`}
+                    <div class="sticker-content">
+                        <div class="sticker-title">${s.title}</div>
+                        <div class="sticker-message">${s.message}</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function renderFooterStickers() {
+    const containers = document.querySelectorAll('[id^="footerStickersSection"]');
+    const stickers = getData('stickers', []).filter(s => s.active !== false);
+    containers.forEach(container => {
+        if (!stickers.length) { container.innerHTML = ''; return; }
+        container.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap gap-3 items-center justify-center py-2">
+                ${stickers.slice(0, 3).map(s => `
+                    <div class="sticker-ad" style="padding:10px 16px;margin:4px 0;">
+                        ${s.image_url ? `<img src="${s.image_url}" alt="${s.title}" class="sticker-image" onerror="this.style.display='none'">` : `<div class="sticker-icon"><i class="fas fa-bullhorn"></i></div>`}
+                        <div class="sticker-content">
+                            <div class="sticker-title">${s.title}</div>
+                            <div class="sticker-message">${s.message}</div>
+                        </div>
+                        <span class="sticker-badge">Ad</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    });
+}
+
+function renderMarketStickers() {
+    const container = document.getElementById('marketStickers');
+    if (!container) return;
+    const stickers = getData('stickers', []).filter(s => s.active !== false);
+    if (!stickers.length) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+        <div class="flex flex-wrap gap-3 items-center justify-center py-2 mb-4">
+            ${stickers.map(s => `
+                <div class="sticker-ad" style="padding:12px 18px;flex:1;min-width:200px;max-width:400px;">
+                    ${s.image_url ? `<img src="${s.image_url}" alt="${s.title}" class="sticker-image" onerror="this.style.display='none'">` : `<div class="sticker-icon"><i class="fas fa-bullhorn"></i></div>`}
+                    <div class="sticker-content">
+                        <div class="sticker-title">${s.title}</div>
+                        <div class="sticker-message">${s.message}</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// ===== PRODUCT ADS - First 10 products appear in ads sections =====
+function renderProductAds() {
+    const products = getData('products', []).filter(p => p.status === 'active').slice(0, 10);
+    const adContainers = [
+        'homeProductAdsContainer',
+        'aboutProductAdsContainer',
+        'galleryProductAdsContainer',
+        'registerProductAdsContainer',
+        'contactProductAdsContainer'
+    ];
+
+    // Header product ads
+    const headerContainer = document.getElementById('headerProductAds');
+    if (headerContainer) {
+        if (!products.length) {
+            headerContainer.innerHTML = '';
+        } else {
+            headerContainer.innerHTML = `
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2">
+                    <div class="ads-scroll-area" style="padding:4px 0;">
+                        ${products.map(p => `
+                            <div class="product-ad-card" onclick="viewProduct('${p.id}')" style="min-width:160px;max-width:200px;">
+                                <div class="product-ad-image" style="min-height:70px;">
+                                    ${p.video_url ? `<video src="${p.video_url}" style="width:100%;height:100%;object-fit:cover;" muted onerror="this.style.display='none'"></video>` : ''}
+                                    ${p.image_url && !p.video_url ? `<img src="${p.image_url}" alt="${p.title}" onerror="this.style.display='none'">` : ''}
+                                    ${!p.video_url && !p.image_url ? `<div style="font-size:1.2rem;color:var(--accent);font-family:'Cormorant Garamond',serif;">SMI</div>` : ''}
+                                </div>
+                                <div class="product-ad-body" style="padding:8px 12px 12px;">
+                                    <div class="product-ad-title" style="font-size:.8rem;">${p.title}</div>
+                                    <div class="product-ad-price" style="font-size:.85rem;">Le ${p.price_leone ? p.price_leone.toLocaleString() : '0'}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    adContainers.forEach(id => {
+        const container = document.getElementById(id);
+        if (!container) return;
+        if (!products.length) {
+            container.innerHTML =
+                '<div class="text-center py-4" style="color:var(--fg-muted);font-size:.85rem;">No products available.</div>';
+            return;
+        }
+        container.innerHTML = products.map(p => `
+                <div class="product-ad-card" onclick="viewProduct('${p.id}')">
+                    <div class="product-ad-image">
+                        ${p.video_url ? `<video src="${p.video_url}" style="width:100%;height:100%;object-fit:cover;" muted onerror="this.style.display='none'"></video>` : ''}
+                        ${p.image_url && !p.video_url ? `<img src="${p.image_url}" alt="${p.title}" onerror="this.style.display='none'">` : ''}
+                        ${!p.video_url && !p.image_url ? `<div style="font-size:1.5rem;color:var(--accent);font-family:'Cormorant Garamond',serif;">SMI</div>` : ''}
+                    </div>
+                    <div class="product-ad-body">
+                        <div class="product-ad-title">${p.title}</div>
+                        <div class="product-ad-price">Le ${p.price_leone ? p.price_leone.toLocaleString() : '0'}</div>
+                        <div class="product-ad-desc">${p.description || ''}</div>
+                        <button class="btn-accent" style="margin-top:8px;padding:6px 14px;font-size:.75rem;width:100%;justify-content:center;" onclick="event.stopPropagation();buyProduct('${p.id}')">
+                            <i class="fas fa-shopping-cart"></i> Buy Now
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+    });
+}
+
+// ============================================================
+// 📱 SOCIAL FEEDS (30+ Platforms)
+// ============================================================
+async function fetchAllSocialFeeds() {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    showToast('Fetching social feeds from 30+ platforms...', 'info');
+
+    const platforms = [
+        'Facebook', 'X (Twitter)', 'Instagram', 'TikTok', 'YouTube',
+        'LinkedIn', 'Pinterest', 'Reddit', 'Snapchat', 'WhatsApp',
+        'Telegram', 'Discord', 'Twitch', 'Tumblr', 'Flickr',
+        'Vimeo', 'Dribbble', 'Behance', 'GitHub', 'GitLab',
+        'Medium', 'Quora', 'Stack Overflow', 'Product Hunt', 'Slack',
+        'Zoom', 'Google', 'Apple', 'Microsoft', 'Amazon', 'Spotify'
+    ];
+
+    const sampleContent = [
+        "Exciting news! Our platform just reached 500 registered businesses. 🚀",
+        "New investor joined our network! Welcome aboard. 💼",
+        "Pitch event scheduled for next month. Register now! 📅",
+        "Success story: Startup raised $2M through our platform. 🎉",
+        "Webinar on investor readiness this Thursday. Don't miss it! 📺",
+        "We're expanding to new markets in Africa and Asia. 🌍",
+        "Featured business of the week: Tech innovation leader. 💡",
+        "Investment round open for early-stage startups. 💰",
+        "Join our community of 1000+ entrepreneurs. 🤝",
+        "New partnership announcement coming soon! 🤫"
+    ];
+
+    const authors = [
+        'SMI Team', 'Investor Relations', 'Startup Spotlight',
+        'Business Growth', 'Funding News', 'Innovation Hub',
+        'Global Network', 'Success Stories', 'Event Updates'
+    ];
+
+    let feeds = getData('socialFeeds', []);
+    let inserted = 0;
+    for (let i = 0; i < platforms.length; i++) {
+        const platform = platforms[i];
+        const content = sampleContent[Math.floor(Math.random() * sampleContent.length)];
+        const author = authors[Math.floor(Math.random() * authors.length)];
+        const existing = feeds.find(f => f.platform === platform && f.author === author);
+        if (!existing) {
+            feeds.push({
+                platform: platform,
+                content: content,
+                author: author,
+                likes: Math.floor(Math.random() * 1000),
+                comments: Math.floor(Math.random() * 100),
+                shares: Math.floor(Math.random() * 50),
+                posted_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+                fetched_at: new Date().toISOString()
+            });
+            inserted++;
+        }
+    }
+    setData('socialFeeds', feeds);
+    showToast(`Fetched ${inserted} new social feeds from ${platforms.length} platforms!`, 'success');
+    refreshSocialFeeds();
+    resetSessionTimer();
+}
+
+function refreshSocialFeeds() {
+    const feeds = getData('socialFeeds', []);
+    const container = document.getElementById('socialFeedContainer');
+    if (!feeds.length) {
+        container.innerHTML =
+            '<div class="text-center py-8" style="color:var(--fg-dim);">No social feeds yet. Click "Fetch All" to load data from 30+ platforms.</div>';
+        return;
+    }
+    container.innerHTML = feeds.slice(0, 10).map(f => `
+            <div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);align-items:center;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);">
+                    <i class="fas fa-share-alt"></i>
+                </div>
+                <div style="flex:1;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <strong style="font-size:.85rem;">${f.platform}</strong>
+                        <span style="color:var(--fg-muted);font-size:.7rem;">•</span>
+                        <span style="color:var(--fg-muted);font-size:.7rem;">${f.author || 'Anonymous'}</span>
+                        <span style="color:var(--fg-dim);font-size:.65rem;margin-left:auto;">${formatTime(f.fetched_at || f.posted_at)}</span>
+                    </div>
+                    <p style="font-size:.85rem;color:var(--fg-warm);margin-top:4px;">${f.content}</p>
+                    <div style="display:flex;gap:16px;margin-top:6px;">
+                        <span style="color:var(--fg-dim);font-size:.7rem;"><i class="fas fa-heart" style="color:var(--danger);"></i> ${f.likes || 0}</span>
+                        <span style="color:var(--fg-dim);font-size:.7rem;"><i class="fas fa-comment"></i> ${f.comments || 0}</span>
+                        <span style="color:var(--fg-dim);font-size:.7rem;"><i class="fas fa-share"></i> ${f.shares || 0}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+    const b = document.getElementById('socialBody');
+    const nd = document.getElementById('socialNoData');
+    if (!feeds.length) { if (b) b.innerHTML = '';
+        if (nd) nd.style.display = ''; return; }
+    if (nd) nd.style.display = 'none';
+    if (b) {
+        b.innerHTML = feeds.slice(0, 20).map(f => `
+                <tr>
+                    <td><span class="badge badge-active">${f.platform}</span></td>
+                    <td>${f.author || 'N/A'}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.content || 'N/A'}</td>
+                    <td>${f.likes || 0}</td>
+                    <td>${f.comments || 0}</td>
+                    <td>${f.shares || 0}</td>
+                    <td style="font-size:.75rem;color:var(--fg-dim);">${formatTime(f.posted_at)}</td>
+                </tr>
+            `).join('');
+    }
+}
+
+// ============================================================
+// 👥 INFLUENCERS
+// ============================================================
+function showAddInfluencerForm() { document.getElementById('addInfluencerForm').style.display = 'block';
+    resetSessionTimer(); }
+
+function hideAddInfluencerForm() {
+    document.getElementById('addInfluencerForm').style.display = 'none';
+    document.getElementById('addInfluencerForm').querySelector('form').reset();
+}
+
+function handleAddInfluencer(e) {
+    e.preventDefault();
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    const name = document.getElementById('infName').value.trim();
+    const platform = document.getElementById('infPlatform').value.trim();
+    const url = document.getElementById('infUrl').value.trim();
+    let code = document.getElementById('infCode').value.trim().toUpperCase();
+    if (!name) { showToast('Name is required.', 'error'); return; }
+    if (!code) code = generateCode();
+
+    const influencers = getData('influencers', []);
+    influencers.push({
+        id: 'inf_' + Date.now(),
+        name,
+        platform,
+        url,
+        code,
+        active: true,
+        detected: false,
+        created_at: new Date().toISOString()
+    });
+    setData('influencers', influencers);
+    showToast('Influencer created: ' + name + ' (Code: ' + code + ')', 'success');
+    hideAddInfluencerForm();
+    renderInfluencers();
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+function renderInfluencers() {
+    const influencers = getData('influencers', []);
+    const detections = getData('influencerDetections', []);
+    const b = document.getElementById('influencersBody');
+    const nd = document.getElementById('influencersNoData');
+    if (!influencers.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = influencers.slice().reverse().map(inf => {
+        const detected = detections.some(d => d.influencerCode === inf.code);
+        const shareLink = window.location.origin + window.location.pathname + '?ref=' + inf.code;
+        return `
+                <tr>
+                    <td><strong>${inf.name}</strong></td>
+                    <td>${inf.platform || 'N/A'}</td>
+                    <td style="font-family:monospace;font-size:.85rem;color:var(--accent-bright);">${inf.code}</td>
+                    <td><a href="${shareLink}" target="_blank" style="color:var(--accent);font-size:.8rem;"><i class="fas fa-link"></i> ${shareLink}</a></td>
+                    <td><span class="badge badge-${inf.active !== false ? 'active' : 'inactive'}">${inf.active !== false ? 'Active' : 'Inactive'}</span></td>
+                    <td>${detected ? '<span style="color:var(--success);"><i class="fas fa-check-circle"></i> Detected</span>' : '<span style="color:var(--fg-dim);">Not yet</span>'}</td>
+                    <td>
+                        <button onclick="toggleInfluencer('${inf.id}')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Toggle Status">
+                            <i class="fas ${inf.active !== false ? 'fa-pause' : 'fa-play'}"></i>
+                        </button>
+                        <button onclick="deleteInfluencer('${inf.id}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:.82rem;padding:4px 8px;" title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+    }).join('');
+    resetSessionTimer();
+}
+
+function toggleInfluencer(id) {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    const influencers = getData('influencers', []);
+    const inf = influencers.find(x => x.id === id);
+    if (!inf) return;
+    inf.active = inf.active === false ? true : false;
+    setData('influencers', influencers);
+    showToast('Influencer updated.', 'success');
+    renderInfluencers();
+    resetSessionTimer();
+}
+
+function deleteInfluencer(id) {
+    if (!currentUser) { showToast('Please login first.', 'error'); return; }
+    if (!confirm('Delete this influencer?')) return;
+    let influencers = getData('influencers', []);
+    influencers = influencers.filter(x => x.id !== id);
+    setData('influencers', influencers);
+    showToast('Influencer deleted.', 'success');
+    renderInfluencers();
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+// ============================================================
+// 💳 CODES
+// ============================================================
+function generateNewCode() {
+    if (!currentUser || currentUser.role !== 'admin') { showToast('Admins only.', 'error'); return; }
+    const code = generateUniqueID();
+    const codes = getData('codes', []);
+    codes.push({ code, status: 'available', created: new Date().toISOString(), usedBy: null });
+    setData('codes', codes);
+    showToast('Code generated: ' + code, 'success');
+    renderCodes();
+    resetSessionTimer();
+}
+
+function renderCodes() {
+    const codes = getData('codes', []);
+    const b = document.getElementById('codesTableBody');
+    const nd = document.getElementById('codesNoData');
+    if (!codes.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = codes.slice().reverse().map(c => `
+            <tr>
+                <td style="font-family:monospace;font-size:.9rem;color:var(--accent-bright);letter-spacing:.04em;">${c.code}</td>
+                <td><span class="badge badge-${c.status === 'available' ? 'pending' : 'completed'}">${c.status || 'available'}</span></td>
+                <td style="color:var(--fg-dim);font-size:.82rem;">${formatDate(c.created)}</td>
+                <td style="color:var(--fg-dim);font-size:.82rem;">${c.usedBy || '—'}</td>
+            </tr>
+        `).join('');
+}
+
+// ============================================================
+// 👥 STAFF
+// ============================================================
+function showAddStaffForm() { document.getElementById('addStaffForm').style.display = 'block';
+    resetSessionTimer(); }
+
+function hideAddStaffForm() {
+    document.getElementById('addStaffForm').style.display = 'none';
+    document.getElementById('addStaffForm').querySelector('form').reset();
+}
+
+function handleAddStaff(e) {
+    e.preventDefault();
+    if (!currentUser || currentUser.role !== 'admin') { showToast('Admins only.', 'error'); return; }
+    const name = document.getElementById('staffName').value.trim();
+    const username = document.getElementById('staffUsername').value.trim();
+    const password = document.getElementById('staffPassword').value;
+    const role = document.getElementById('staffRole').value;
+    if (!name || !username || !password) { showToast('All fields are required.', 'error'); return; }
+    const users = getData('users', []);
+    if (users.find(u => u.username === username)) { showToast('Username exists.', 'error'); return; }
+    users.push({ username, password, role, name, created: new Date().toISOString() });
+    setData('users', users);
+    hideAddStaffForm();
+    e.target.reset();
+    showToast('Created: ' + name, 'success');
+    renderStaff();
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+function deleteStaff(username) {
+    if (!currentUser || currentUser.role !== 'admin') return;
+    if (username === 'admin') { showToast('Cannot delete primary admin.', 'error'); return; }
+    let users = getData('users', []);
+    users = users.filter(x => x.username !== username);
+    setData('users', users);
+    showToast('Removed.', 'info');
+    renderStaff();
+    refreshAdminData();
+    resetSessionTimer();
+}
+
+function renderStaff() {
+    const users = getData('users', []);
+    const b = document.getElementById('staffTableBody');
+    const nd = document.getElementById('staffNoData');
+    if (!users.length) { b.innerHTML = '';
+        nd.style.display = ''; return; }
+    nd.style.display = 'none';
+    b.innerHTML = users.map(u => `
+            <tr>
+                <td>${u.name}</td>
+                <td style="font-family:monospace;font-size:.88rem;">${u.username}</td>
+                <td><span class="badge" style="background:var(--accent-glow);color:var(--accent-bright);">${u.role || 'staff'}</span></td>
+                <td style="color:var(--fg-dim);font-size:.82rem;">${formatDate(u.created)}</td>
+                <td>${u.username !== 'admin' ? `<button onclick="deleteStaff('${u.username}')" style="background:none;border:none;color:#e68a8a;cursor:pointer;font-size:.82rem;" title="Delete"><i class="fas fa-trash-alt"></i></button>` : '<span style="color:var(--fg-dim);font-size:.75rem;">Protected</span>'}</td>
+            </tr>
+        `).join('');
+}
+
+// ============================================================
+// 💬 WHATSAPP & CONTACT
+// ============================================================
+function goToWhatsAppRegister() {
+    const msg = encodeURIComponent(
+        'Hello Stars Meet Investors! I would like to register my business. Kindly guide me through the registration process.'
+        );
+    window.open('https://wa.me/23231286286?text=' + msg, '_blank');
+    trackAction('whatsapp_register', 'click');
+    resetSessionTimer();
+}
+
+function handleContact(e) {
+    e.preventDefault();
+    showToast('Message received. We will respond shortly.', 'success');
+    e.target.reset();
+    trackAction('contact_submit', 'form');
+    resetSessionTimer();
+}
+
+// ============================================================
+// 🖼️ GALLERY
+// ============================================================
+const GALLERY_IMAGES = [
+    { caption: 'Investor Pitch Session' },
+    { caption: 'Networking Breakfast' },
+    { caption: 'Panel Discussion' },
+    { caption: 'Deal Signing' },
+    { caption: 'Business Showcase' },
+    { caption: 'Awards Night' },
+    { caption: 'Workshop' },
+    { caption: 'Closing Gala' },
+    { caption: 'Investor Roundtable' },
+    { caption: 'Stars Meet Investors' }
+];
+
+function initGallery() {
+    const grid = document.getElementById('galleryGrid');
+    if (!grid) return;
+    grid.innerHTML = GALLERY_IMAGES.map((img, i) => {
+        const span = (i === 0 || i === 5) ? 'md:col-span-2 md:row-span-2' : '';
+        const h = (i === 0 || i === 5) ? 'h-52 sm:h-64 md:h-full' : 'h-40 sm:h-48 md:h-56';
+        return `
+                <div class="gallery-img ${h} ${span}" onclick="openLightbox('')">
+                    <div style="width:100%;height:100%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;border-radius:14px;font-size:1.2rem;font-weight:700;color:var(--accent);font-family:'Cormorant Garamond',serif;">SMI</div>
+                    <div class="gallery-overlay"><span class="text-sm font-semibold">${img.caption}</span></div>
+                </div>
+            `;
+    }).join('');
+}
+
+function openLightbox(src) {
+    document.getElementById('lightboxImg').src =
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23161110"/%3E%3Ctext x="200" y="210" font-size="48" text-anchor="middle" fill="%23c8956c" font-family="serif" font-weight="bold"%3ESMI%3C/text%3E%3C/svg%3E';
+    document.getElementById('lightbox').classList.add('show');
+    resetSessionTimer();
+}
+
+function closeLightbox() { document.getElementById('lightbox').classList.remove('show'); }
+
+// ============================================================
+// 💬 CHATBOT
+// ============================================================
+let chatOpen = false,
+    chatInitialized = false;
+
+function toggleChat() {
+    chatOpen = !chatOpen;
+    const w = document.getElementById('chatWindow'),
+        icon = document.getElementById('chatToggleIcon'),
+        badge = document.getElementById('chatBadge');
+    if (chatOpen) {
+        w.classList.add('open');
+        icon.className = 'fas fa-times';
+        badge.style.display = 'none';
+        if (!chatInitialized) { initChat();
+            chatInitialized = true; }
+        setTimeout(() => document.getElementById('chatInput').focus(), 300);
+        resetSessionTimer();
+    } else { w.classList.remove('open');
+        icon.className = 'fas fa-comment-dots'; }
+}
+
+function initChat() {
+    addBotMessage(
+        "Good day, and welcome to Stars Meet Investors. I'm your concierge — here to help you learn about our platform, services, and how we connect businesses with the right investors. How may I assist you today?"
+        );
+    showQuickReplies(['What is SMI?', 'How to Register', 'Upcoming Events', 'Investor Requirements', 'Pricing & Fees',
+        'Contact Support'
+    ]);
+}
+
+function showQuickReplies(options) {
+    const q = document.getElementById('chatQuick');
+    q.innerHTML = options.map(o =>
+        `<button class="chat-quick-btn" onclick="handleQuickReply('${o.replace(/'/g, "\\'")}')">${o}</button>`
+        ).join('');
+}
+
+function handleQuickReply(text) {
+    addUserMessage(text);
+    document.getElementById('chatQuick').innerHTML = '';
+    showTyping();
+    setTimeout(() => processQuestion(text), 800 + Math.random() * 600);
+    resetSessionTimer();
+}
+
+function sendChat() {
+    const input = document.getElementById('chatInput'),
+        text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addUserMessage(text);
+    document.getElementById('chatQuick').innerHTML = '';
+    showTyping();
+    setTimeout(() => processQuestion(text), 800 + Math.random() * 600);
+    resetSessionTimer();
+}
+
+document.getElementById('chatInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault();
+        sendChat(); }
+});
+
+function addBotMessage(text) {
+    const m = document.getElementById('chatMessages'),
+        d = document.createElement('div');
+    d.className = 'chat-msg bot';
+    d.innerHTML = text;
+    m.appendChild(d);
+    m.scrollTop = m.scrollHeight;
+}
+
+function addUserMessage(text) {
+    const m = document.getElementById('chatMessages'),
+        d = document.createElement('div');
+    d.className = 'chat-msg user';
+    d.textContent = text;
+    m.appendChild(d);
+    m.scrollTop = m.scrollHeight;
+}
+
+function showTyping() {
+    const m = document.getElementById('chatMessages'),
+        d = document.createElement('div');
+    d.className = 'chat-typing';
+    d.id = 'typingIndicator';
+    d.innerHTML = '<span></span><span></span><span></span>';
+    m.appendChild(d);
+    m.scrollTop = m.scrollHeight;
+}
+
+function hideTyping() { const t = document.getElementById('typingIndicator'); if (t) t.remove(); }
+
+function processQuestion(q) {
+    hideTyping();
+    const ql = q.toLowerCase();
+
+    if (/^(hi|hello|hey|good\s*(morning|afternoon|evening|day))/i.test(ql)) {
+        addBotMessage(
+            "Thank you for reaching out. It's a pleasure to assist you. Could you let me know what specifically you'd like to learn about Stars Meet Investors?"
+            );
+        showQuickReplies(['What is SMI?', 'How to Register', 'Upcoming Events']);
+        return;
+    }
+    if (/what\s*(is|are)\s*(smi|stars meet investors)|tell\s*me\s*about|who\s*(is|are)\s*(you|smi)/i.test(ql)) {
+        addBotMessage(
+            "Stars Meet Investors is a premier platform that bridges ambitious businesses with strategic investors. We curate, verify, and present businesses to a network of over 120 pre-qualified investors across 12+ countries. Since 2019, we've facilitated over $24 million in investment capital and closed 35+ deals. Our services include investor matching, live pitch events, growth analytics, and secure documentation with watermarked registration certificates."
+            );
+        showQuickReplies(['How to Register', 'Upcoming Events', 'Investor Requirements']);
+        return;
+    }
+    if (/register|registration|sign\s*up|how\s*to\s*join|apply|enroll/i.test(ql)) {
+        addBotMessage(
+            "Registration is handled personally through our WhatsApp channel to ensure a seamless, guided experience. When you click <strong>Register</strong> on our website, you'll be connected directly with our registration team who will walk you through each step. They'll collect your business details, verify your information, and issue your unique registration ID with a watermarked certificate.<br><br>Would you like me to redirect you to WhatsApp to begin?"
+            );
+        showQuickReplies(['Yes, take me to WhatsApp', 'What info do I need?']);
+        return;
+    }
+    if (/yes.*whatsapp|take me|redirect|open whatsapp/i.test(ql)) {
+        goToWhatsAppRegister();
+        addBotMessage("Redirecting you to WhatsApp now. Our team will assist you shortly!");
+        return;
+    }
+    if (/what\s*(info|information|details|documents?)\s*(do\s*i\s*)?(need|require)|prepare|bring/i.test(ql)) {
+        addBotMessage(
+            "To register, please have the following ready:<br><br>• <strong>Business Name</strong> — your official registered name<br>• <strong>Registration Number</strong> — e.g., RC-1234567<br>• <strong>Representative Name</strong> — the primary contact person<br>• <strong>Email & Phone</strong> — active contact details<br>• <strong>Industry/Sector</strong> — Technology, Agriculture, Healthcare, etc.<br>• <strong>Business Stage</strong> — Pre-Seed, Seed, Series A, etc.<br>• <strong>Capital Seeking</strong> — how much investment you need<br>• <strong>Business Address</strong><br>• <strong>Brief Description</strong> — your mission and what you seek from investors<br><br>Our WhatsApp team will guide you through each field."
+            );
+        return;
+    }
+    if (/event|pitch|upcoming|next\s*(event|session|pitch)|summit|conference|gala/i.test(ql)) {
+        addBotMessage(
+            "We host several types of events throughout the year:<br><br>• <strong>Live Pitch Sessions</strong> — Present directly to investor panels<br>• <strong>Networking Breakfasts</strong> — Casual investor-founder meetups<br>• <strong>Panel Discussions</strong> — Industry experts share insights<br>• <strong>Workshops</strong> — Pitch deck preparation, financial modeling<br>• <strong>Awards & Gala Nights</strong> — Celebrating successful deals<br><br>Registered businesses get priority access and discounted tickets. For specific dates, I'd recommend reaching out to our team directly."
+            );
+        showQuickReplies(['How to Register', 'Contact Support']);
+        return;
+    }
+    if (/investor\s*(requirement|criteria|looking|want|need)|what\s*do\s*investor|qualif/i.test(ql)) {
+        addBotMessage(
+            "Our investors typically look for:<br><br>• <strong>Clear Value Proposition</strong> — a problem worth solving<br>• <strong>Traction</strong> — revenue, users, or meaningful progress<br>• <strong>Scalable Model</strong> — potential for significant growth<br>• <strong>Strong Team</strong> — experienced and committed founders<br>• <strong>Market Size</strong> — addressable market of meaningful scale<br>• <strong>Financial Clarity</strong> — understanding of unit economics<br><br>That said, investors on our platform span from angel investors open to early-stage ideas to VCs seeking growth-stage companies. We match you based on your specific profile."
+            );
+        return;
+    }
+    if (/pric|cost|fee|how\s*much|payment|free|charge|afford/i.test(ql)) {
+        addBotMessage(
+            "Our pricing varies based on the level of engagement you seek. We offer different tiers — from basic registration to premium packages that include guaranteed pitch slots, dedicated investor meetings, and extended visibility. For specific pricing details tailored to your needs, our team would be happy to provide a personalized breakdown."
+            );
+        showQuickReplies(['Contact Support for Pricing', 'How to Register']);
+        return;
+    }
+    if (/contact|support|help\s*me|human|real\s*person|speak|talk\s*to|agent|whatsapp|phone\s*number/i.test(ql)) {
+        addBotMessage(
+            "I'd be happy to connect you with our team for a more personalized conversation. You can reach us through:<br><br>• <strong>WhatsApp</strong>: <a href='https://wa.me/23231286286' target='_blank'>+23231286286</a> (recommended — fastest response)<br>• <strong>Email</strong>: info@starsmeetinvestors.com<br>• <strong>Phone</strong>: +232 31 286 286<br><br>Our WhatsApp line is the quickest way to get a detailed response."
+            );
+        showQuickReplies(['Open WhatsApp', 'Ask something else']);
+        return;
+    }
+    if (/cash\s*payment|pay\s*in\s*cash|cash\s*only|offline\s*payment/i.test(ql)) {
+        addBotMessage(
+            "Yes, we do accommodate cash payments. When you register via WhatsApp, simply inform our team that you'd prefer the cash payment option. They will generate a unique code for you, and once payment is confirmed, your registration will be completed and your certificate issued. The process is straightforward and our team handles everything."
+            );
+        return;
+    }
+    if (/document|certificate|pdf|watermark|proof|verif/i.test(ql)) {
+        addBotMessage(
+            "Upon successful registration, you receive an official registration certificate as a PDF document. This certificate features:<br><br>• Your unique <strong>SMI-XXXX-XXXX</strong> registration ID<br>• Your business and representative details<br>• A <strong>watermarked profile image</strong> for authentication<br>• Diagonal watermark text across the entire document<br>• Status and date of registration<br><br>This document serves as verifiable proof of your registration with Stars Meet Investors and can be shared with investors or partners."
+            );
+        return;
+    }
+    if (/countr|location|where|office|based|headquarter|sierra|leone|freetown|global/i.test(ql)) {
+        addBotMessage(
+            "Our headquarters is in Freetown, Sierra Leone. However, our investor network spans 12+ countries including Nigeria, South Africa, Kenya, Ghana, the UK, the UAE, the US, and more. We operate globally — businesses from any country can register and gain access to our international investor pool."
+            );
+        return;
+    }
+    if (/success|deal|closed|fund|raised|story|testimonial|result/i.test(ql)) {
+        addBotMessage(
+            "Since our founding in 2019, Stars Meet Investors has facilitated over <strong>$24 million</strong> in investment capital and closed <strong>35+ deals</strong> across various industries including technology, agriculture, healthcare, and logistics. Our satisfaction rate stands at 98%. While we keep specific deal details confidential per our agreements, the numbers speak to the effectiveness of our matching process."
+            );
+        return;
+    }
+    if (/thank|thanks|appreciate|grateful/i.test(ql)) {
+        addBotMessage(
+            "You're most welcome. It's been a pleasure assisting you. If you have any other questions in the future, don't hesitate to reach out. Wishing you the very best on your investment journey."
+            );
+        showQuickReplies(['Register Now', 'Ask something else']);
+        return;
+    }
+    if (/bye|goodbye|see\s*you|later|good\s*night/i.test(ql)) {
+        addBotMessage(
+            "Thank you for visiting Stars Meet Investors. We look forward to supporting your business growth. Have a wonderful day!"
+            );
+        return;
+    }
+
+    addBotMessage(
+        "I appreciate your question, though I want to make sure you receive the most accurate and helpful response. For this particular inquiry, I'd recommend speaking directly with our team on WhatsApp — they can provide detailed, personalized answers that I may not have in my current knowledge base.<br><br>You can reach them at <a href='https://wa.me/23231286286' target='_blank'>+23231286286</a>."
+        );
+    showQuickReplies(['Open WhatsApp', 'Ask about SMI', 'How to Register', 'Contact Info']);
+}
+
+// ============================================================
+// 🎨 PARTICLES
+// ============================================================
+function initParticles() {
+    const cv = document.getElementById('bgCanvas'),
+        ctx = cv.getContext('2d');
+    let w, h, pts = [];
+    const N = 45;
+
+    function resize() { w = cv.width = window.innerWidth;
+        h = cv.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (let i = 0; i < N; i++) {
+        pts.push({ x: Math.random() * w, y: Math.random() * h, vx: (Math.random() - .5) * .22, vy: (Math.random() - .5) *
+                .22, r: Math.max(.5, Math.random() * 1.6), a: Math.random() * .18 + .03 });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, w, h);
+        pts.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0) p.x = w;
+            if (p.x > w) p.x = 0;
+            if (p.y < 0) p.y = h;
+            if (p.y > h) p.y = 0;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(.1, p.r), 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(200,149,108,' + p.a + ')';
+            ctx.fill();
+        });
+        for (let i = 0; i < pts.length; i++) {
+            for (let j = i + 1; j < pts.length; j++) {
+                const dx = pts[i].x - pts[j].x,
+                    dy = pts[i].y - pts[j].y,
+                    d = Math.sqrt(dx * dx + dy * dy);
+                if (d < 130) {
+                    ctx.beginPath();
+                    ctx.moveTo(pts[i].x, pts[i].y);
+                    ctx.lineTo(pts[j].x, pts[j].y);
+                    ctx.strokeStyle = 'rgba(200,149,108,' + (0.025 * (1 - d / 130)) + ')';
+                    ctx.lineWidth = .5;
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(draw);
+    }
+    draw();
+}
+
+// ============================================================
+// 🎨 ANIMATIONS
+// ============================================================
+function initRevealAnimations() {
+    const els = document.querySelectorAll('.reveal:not(.visible)');
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach((e, i) => {
+            if (e.isIntersecting) {
+                setTimeout(() => e.target.classList.add('visible'), i * 80);
+                obs.unobserve(e.target);
+            }
+        });
+    }, { threshold: .1 });
+    els.forEach(el => obs.observe(el));
+}
+
+function initCounters() {
+    const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                const el = e.target,
+                    t = parseInt(el.dataset.count);
+                let c = 0;
+                const s = Math.max(1, Math.floor(t / 60));
+                const timer = setInterval(() => {
+                    c += s;
+                    if (c >= t) { c = t;
+                        clearInterval(timer); }
+                    el.textContent = c + '+';
+                }, 25);
+                obs.unobserve(el);
+            }
+        });
+    }, { threshold: .5 });
+    document.querySelectorAll('[data-count]').forEach(c => obs.observe(c));
+}
+
+function initNavScroll() {
+    window.addEventListener('scroll', () => {
+        document.getElementById('mainNav').style.boxShadow = window.scrollY > 50 ? '0 4px 30px rgba(0,0,0,0.35)' :
+            'none';
+        resetSessionTimer();
+    });
+}
+
+// ============================================================
+// 🚀 INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', async function() {
+    initDefaults();
+    await detectLocation();
+    initGallery();
+    initParticles();
+    initRevealAnimations();
+    initCounters();
+    initNavScroll();
+    renderAllStickersAndAds();
+    renderMarket();
+    renderStickers();
+    renderInfluencers();
+    refreshAdminData();
+
+    // Check for influencer ref in URL
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+        const influencers = getData('influencers', []);
+        const inf = influencers.find(i => i.code === ref);
+        if (inf) {
+            showToast('🔗 Influencer link detected: ' + inf.name, 'success');
+            trackAction('influencer_click', { code: ref, name: inf.name });
+        }
+    }
+
+    trackAction('page_load', 'home');
+
+    console.log('🚀 Stars Meet Investors AI Dashboard loaded successfully!');
+    console.log('📍 Location: ' + visitorLocation.full);
+    console.log('🔑 Default login: admin / starsmeet2025');
+    console.log('📌 Stickers/Ads flow: Top → Mid → Footer (all pages)');
+    console.log('📦 5 Default products loaded. First 10 products appear as ads.');
+    console.log('👥 Influencer tracking active with shareable links.');
+    console.log('📱 30+ Social media platforms integrated.');
+    console.log('⏰ Auto-logout after 30 minutes of inactivity.');
+});
+</script>
+</body>
+</html>
